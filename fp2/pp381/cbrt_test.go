@@ -60,7 +60,7 @@ func TestCbrtDirectVsTorus(t *testing.T) {
 
 		var z1, z2 E2
 		r1 := z1.Cbrt(&x)
-		r2 := z2.CbrtDirect(&x)
+		r2 := z2.cbrtDirect(&x)
 		if r1 == nil || r2 == nil {
 			t.Fatalf("one method returned nil (iter %d)", i)
 		}
@@ -121,7 +121,7 @@ func BenchmarkCbrtDirect(b *testing.B) {
 	x.Mul(&x, &a)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		a.CbrtDirect(&x)
+		a.cbrtDirect(&x)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestCbrtFrobeniusVsTorus(t *testing.T) {
 
 		var z1, z2 E2
 		r1 := z1.Cbrt(&x)
-		r2 := z2.CbrtFrobenius(&x)
+		r2 := z2.cbrtFrobenius(&x)
 		if r1 == nil || r2 == nil {
 			t.Fatalf("one method returned nil (iter %d)", i)
 		}
@@ -154,6 +154,106 @@ func BenchmarkCbrtFrobenius(b *testing.B) {
 	x.Mul(&x, &a)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		a.CbrtFrobenius(&x)
+		a.cbrtFrobenius(&x)
+	}
+}
+
+
+func TestCbrtTorusPracVsTorus(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		var a, x E2
+		a.SetRandom()
+		x.Square(&a)
+		x.Mul(&x, &a)
+
+		var z1, z2 E2
+		r1 := z1.Cbrt(&x)
+		r2 := z2.cbrtTorusPrac(&x)
+		if r1 == nil || r2 == nil {
+			t.Fatalf("one method returned nil (iter %d)", i)
+		}
+		var c1, c2 E2
+		c1.Square(&z1).Mul(&c1, &z1)
+		c2.Square(&z2).Mul(&c2, &z2)
+		if !c1.Equal(&x) || !c2.Equal(&x) {
+			t.Fatalf("cube root verification failed (iter %d)", i)
+		}
+	}
+}
+
+func TestCbrtFrobenius1bitVsTorus(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		var a, x E2
+		a.SetRandom()
+		x.Square(&a)
+		x.Mul(&x, &a)
+
+		var z1, z2 E2
+		r1 := z1.Cbrt(&x)
+		r2 := z2.cbrtFrobenius1bit(&x)
+		if r1 == nil || r2 == nil {
+			t.Fatalf("one method returned nil (iter %d)", i)
+		}
+		var c1, c2 E2
+		c1.Square(&z1).Mul(&c1, &z1)
+		c2.Square(&z2).Mul(&c2, &z2)
+		if !c1.Equal(&x) || !c2.Equal(&x) {
+			t.Fatalf("cube root verification failed (iter %d)", i)
+		}
+	}
+}
+
+func BenchmarkCbrtTorusPrac(b *testing.B) {
+	var a, x E2
+	a.SetRandom()
+	x.Square(&a)
+	x.Mul(&x, &a)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		a.cbrtTorusPrac(&x)
+	}
+}
+
+func BenchmarkCbrtFrobenius1bit(b *testing.B) {
+	var a, x E2
+	a.SetRandom()
+	x.Square(&a)
+	x.Mul(&x, &a)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		a.cbrtFrobenius1bit(&x)
+	}
+}
+
+
+func TestCbrtAllMethods(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		var a, x E2
+		a.SetRandom()
+		x.Square(&a)
+		x.Mul(&x, &a)
+
+		var z [5]E2
+		methods := []struct {
+			name string
+			fn   func(*E2, *E2) *E2
+		}{
+			{"Cbrt", (*E2).Cbrt},
+			{"cbrtDirect", (*E2).cbrtDirect},
+			{"cbrtFrobenius", (*E2).cbrtFrobenius},
+			{"cbrtFrobenius1bit", (*E2).cbrtFrobenius1bit},
+			{"cbrtTorusPrac", (*E2).cbrtTorusPrac},
+		}
+
+		for j, m := range methods {
+			if m.fn(&z[j], &x) == nil {
+				t.Fatalf("%s returned nil (iter %d)", m.name, i)
+			}
+			var check E2
+			check.Square(&z[j]).Mul(&check, &z[j])
+			if !check.Equal(&x) {
+				t.Fatalf("%s: z³ != x (iter %d)", m.name, i)
+			}
+		}
 	}
 }
