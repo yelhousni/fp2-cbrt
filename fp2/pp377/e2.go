@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"sync"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/pp377"
+	fp "github.com/yelhousni/fp2-cbrt/fp/pp377"
 )
 
 // E2 is a degree-two extension of fp.Element

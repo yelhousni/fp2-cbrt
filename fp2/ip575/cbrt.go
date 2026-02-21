@@ -3,7 +3,7 @@ package ip575
 import (
 	"math/big"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/ip575"
+	fp "github.com/yelhousni/fp2-cbrt/fp/ip575"
 )
 
 var lucasExponent = [9]uint64{

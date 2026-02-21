@@ -3,7 +3,7 @@ package ip381
 import (
 	"math/big"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/ip381"
+	fp "github.com/yelhousni/fp2-cbrt/fp/ip381"
 )
 
 // lucasExponent is e = 3⁻¹ mod (p+1) as little-endian uint64 limbs.

@@ -3,7 +3,7 @@ package pp254
 import (
 	"math/big"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/pp254"
+	fp "github.com/yelhousni/fp2-cbrt/fp/pp254"
 )
 
 // lucasExponent is e = 3⁻¹ mod (p+1) as little-endian uint64 limbs.

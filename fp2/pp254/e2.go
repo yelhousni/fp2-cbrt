@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"sync"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/pp254"
+	fp "github.com/yelhousni/fp2-cbrt/fp/pp254"
 )
 
 type E2 struct {

@@ -22,7 +22,7 @@ Implements three methods for computing cube roots in quadratic extension fields 
 ## Repository structure
 
 ```
-fields/          Pre-generated Fp arithmetic packages (from gnark-crypto)
+fp/              Pre-generated Fp arithmetic packages (from gnark-crypto)
   pp254/         BN254 base field
   pp377/         BLS12-377 base field
   pp381/         BLS12-381 base field
@@ -45,10 +45,6 @@ fp2/             Per-prime Fp2 arithmetic + cube root implementations
 ## Prerequisites
 
 - Go >= 1.22
-- The `fields/` packages depend on `gnark-crypto`. The `go.mod` uses a local `replace` directive pointing to a local gnark-crypto checkout. Adjust the path in `go.mod` if needed:
-  ```
-  replace github.com/consensys/gnark-crypto => /path/to/gnark-crypto
-  ```
 
 ## Build & test
 

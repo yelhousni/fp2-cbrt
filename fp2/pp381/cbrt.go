@@ -3,7 +3,7 @@ package pp381
 import (
 	"math/big"
 
-	fp "github.com/yelhousni/fp2-cbrt/fields/pp381"
+	fp "github.com/yelhousni/fp2-cbrt/fp/pp381"
 )
 
 var lucasExponent = [6]uint64{
