@@ -1,0 +1,11 @@
+=== RUN   TestElementLegendre
+=== PAUSE TestElementLegendre
+=== CONT  TestElementLegendre
++ legendre should output same result than big.Int.Jacobi: OK, passed 1000
+   tests.
+--- PASS: TestElementLegendre (0.03s)
+goos: darwin
+goarch: arm64
+pkg: github.com/consensys/gnark-crypto/ecc/bls12-381/fp
+cpu: Apple M1
+BenchmarkElementLegendre
