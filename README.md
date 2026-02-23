@@ -1,5 +1,10 @@
 # fp2-cbrt
 
+<p align="center">
+  <img src="torus_loop.gif" alt="Cube root via algebraic torus" width="500">
+</p>
+
+
 Companion code for *"Fast cube roots in Fp2 via the algebraic torus"*.
 
 ## Methods
