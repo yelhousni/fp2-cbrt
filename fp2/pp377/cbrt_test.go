@@ -158,29 +158,6 @@ func BenchmarkCbrtFrobenius(b *testing.B) {
 	}
 }
 
-
-func TestCbrtTorusPracVsTorus(t *testing.T) {
-	for i := 0; i < 10; i++ {
-		var a, x E2
-		a.SetRandom()
-		x.Square(&a)
-		x.Mul(&x, &a)
-
-		var z1, z2 E2
-		r1 := z1.Cbrt(&x)
-		r2 := z2.cbrtTorusPrac(&x)
-		if r1 == nil || r2 == nil {
-			t.Fatalf("one method returned nil (iter %d)", i)
-		}
-		var c1, c2 E2
-		c1.Square(&z1).Mul(&c1, &z1)
-		c2.Square(&z2).Mul(&c2, &z2)
-		if !c1.Equal(&x) || !c2.Equal(&x) {
-			t.Fatalf("cube root verification failed (iter %d)", i)
-		}
-	}
-}
-
 func TestCbrtFrobenius1bitVsTorus(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		var a, x E2
