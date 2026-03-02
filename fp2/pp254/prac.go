@@ -34,13 +34,16 @@ func lucasVPrac(alpha *fp.Element) fp.Element {
 	var two fp.Element
 	two.SetUint64(2)
 
+	// Specialize op[0]: case 3 with A=B=α, C=2.
+	// T = α·α - 2 uses Square instead of Mul (saves ~0.2 Mfp).
+	// After rotate: A=α, B=α²-2, C=α.
 	reg[0].Set(alpha)
-	reg[1].Set(alpha)
-	reg[2].Set(&two)
+	reg[1].Square(alpha).Sub(&reg[1], &two)
+	reg[2].Set(alpha)
 
 	pA, pB, pC, pT := &reg[0], &reg[1], &reg[2], &reg[3]
 
-	for _, fop := range pracOps {
+	for _, fop := range pracOps[1:] {
 		if fop&0x80 != 0 {
 			pA, pB = pB, pA
 		}
