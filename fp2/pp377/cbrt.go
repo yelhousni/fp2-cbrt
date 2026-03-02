@@ -46,12 +46,11 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 		}
 		negA1OverBeta.Neg(&x.A1)
 		negA1OverBeta.Mul(&negA1OverBeta, &betaInvNeg)
-		var y E2
-		if y.A1.Cbrt(&negA1OverBeta) == nil {
+		if z.A1.Cbrt(&negA1OverBeta) == nil {
 			return nil
 		}
-		y.A0.SetZero()
-		return z.cbrtVerifyAndAdjust(x, &y)
+		z.A0.SetZero()
+		return z.cbrtVerify(x)
 	}
 
 	// x₀², x₁²
@@ -67,42 +66,41 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 	// m = cbrt(N) and normInv = 1/N
 	m, normInv := cbrtAndNormInverse(&norm)
 
-	// α_t = 2·(x₀² - β·x₁²)/N = trace of x^{p-1} on T₂
-	var alphaT fp.Element
-	alphaT.Sub(&x0sq, &betaX1sq)
-	alphaT.Double(&alphaT)
-	alphaT.Mul(&alphaT, &normInv)
+	// τ = 2·(x₀² - |β|·x₁²)/N = trace of x^{p-1} on T₂
+	var tau fp.Element
+	tau.Sub(&x0sq, &betaX1sq)
+	tau.Double(&tau)
+	tau.Mul(&tau, &normInv)
 
-	// s₁ = V_e(α_t, 1) where e = 3⁻¹ mod (p+1)
-	sp := lucasV(&alphaT)
+	// σ = V_e(τ) where e = 3⁻¹ mod (p+1)
+	sigma := lucasV(&tau)
 
-	// Recovery: z₀ = x₀/(m·(s₁-1)), z₁ = x₁/(m·(s₁+1))
-	var one, s1m1, s1p1, d0, d1, d0d1, d0d1Inv fp.Element
+	// Recovery: z₀ = x₀/(m·(σ-1)), z₁ = x₁/(m·(σ+1))
+	var one, d0, d1, d0d1, d0d1Inv fp.Element
 	one.SetOne()
-	s1m1.Sub(&sp, &one)
-	s1p1.Add(&sp, &one)
-	d0.Mul(&m, &s1m1)
-	d1.Mul(&m, &s1p1)
+	d0.Sub(&sigma, &one)
+	d0.Mul(&m, &d0)
+	d1.Add(&sigma, &one)
+	d1.Mul(&m, &d1)
 
 	d0d1.Mul(&d0, &d1)
 	d0d1Inv.Inverse(&d0d1)
 
-	var y E2
-	y.A0.Mul(&d1, &d0d1Inv).Mul(&y.A0, &x.A0)
-	y.A1.Mul(&d0, &d0d1Inv).Mul(&y.A1, &x.A1)
+	z.A0.Mul(&d1, &d0d1Inv).Mul(&z.A0, &x.A0)
+	z.A1.Mul(&d0, &d0d1Inv).Mul(&z.A1, &x.A1)
 
-	return z.cbrtVerifyAndAdjust(x, &y)
+	return z.cbrtVerify(x)
 }
 
-// cbrtVerifyAndAdjust verifies y³ = x. Returns nil if not.
+// cbrtVerify checks z³ = x. Returns nil if not.
 // For p mod 9 = 7, cube root is unique: no adjustment needed.
-func (z *E2) cbrtVerifyAndAdjust(x *E2, y *E2) *E2 {
+func (z *E2) cbrtVerify(x *E2) *E2 {
 	var c E2
-	c.Square(y).Mul(&c, y)
+	c.Square(z).Mul(&c, z)
 	if !c.Equal(x) {
 		return nil
 	}
-	return z.Set(y)
+	return z
 }
 
 // cbrtAndNormInverse computes m = cbrt(norm) and normInv = 1/norm.
@@ -167,9 +165,8 @@ func (z *E2) cbrtDirect(x *E2) *E2 {
 		return z
 	}
 
-	var y E2
-	y.expByE2Cbrt(*x)
-	return z.cbrtVerifyAndAdjust(x, &y)
+	z.expByE2Cbrt(*x)
+	return z.cbrtVerify(x)
 }
 
 // CbrtFrobenius computes the E2 cube root using Frobenius decomposition
@@ -182,9 +179,8 @@ func (z *E2) cbrtFrobenius(x *E2) *E2 {
 		z.A1.SetZero()
 		return z
 	}
-	var y E2
-	y.expByE2CbrtFrobenius(*x)
-	return z.cbrtVerifyAndAdjust(x, &y)
+	z.expByE2CbrtFrobenius(*x)
+	return z.cbrtVerify(x)
 }
 
 func (z *E2) expByE2CbrtFrobenius(x E2) *E2 {
@@ -270,12 +266,11 @@ func (z *E2) cbrtTorusPrac(x *E2) *E2 {
 		}
 		negA1OverBeta.Neg(&x.A1)
 		negA1OverBeta.Mul(&negA1OverBeta, &betaInvNeg)
-		var y E2
-		if y.A1.Cbrt(&negA1OverBeta) == nil {
+		if z.A1.Cbrt(&negA1OverBeta) == nil {
 			return nil
 		}
-		y.A0.SetZero()
-		return z.cbrtVerifyAndAdjust(x, &y)
+		z.A0.SetZero()
+		return z.cbrtVerify(x)
 	}
 
 	var x0sq, x1sq fp.Element
@@ -288,28 +283,27 @@ func (z *E2) cbrtTorusPrac(x *E2) *E2 {
 
 	m, normInv := cbrtAndNormInverse(&norm)
 
-	var alphaT fp.Element
-	alphaT.Sub(&x0sq, &betaX1sq)
-	alphaT.Double(&alphaT)
-	alphaT.Mul(&alphaT, &normInv)
+	var tau fp.Element
+	tau.Sub(&x0sq, &betaX1sq)
+	tau.Double(&tau)
+	tau.Mul(&tau, &normInv)
 
-	sp := lucasVPrac(&alphaT)
+	sigma := lucasVPrac(&tau)
 
-	var one, s1m1, s1p1, d0, d1, d0d1, d0d1Inv fp.Element
+	var one, d0, d1, d0d1, d0d1Inv fp.Element
 	one.SetOne()
-	s1m1.Sub(&sp, &one)
-	s1p1.Add(&sp, &one)
-	d0.Mul(&m, &s1m1)
-	d1.Mul(&m, &s1p1)
+	d0.Sub(&sigma, &one)
+	d0.Mul(&m, &d0)
+	d1.Add(&sigma, &one)
+	d1.Mul(&m, &d1)
 
 	d0d1.Mul(&d0, &d1)
 	d0d1Inv.Inverse(&d0d1)
 
-	var y E2
-	y.A0.Mul(&d1, &d0d1Inv).Mul(&y.A0, &x.A0)
-	y.A1.Mul(&d0, &d0d1Inv).Mul(&y.A1, &x.A1)
+	z.A0.Mul(&d1, &d0d1Inv).Mul(&z.A0, &x.A0)
+	z.A1.Mul(&d0, &d0d1Inv).Mul(&z.A1, &x.A1)
 
-	return z.cbrtVerifyAndAdjust(x, &y)
+	return z.cbrtVerify(x)
 }
 
 func (z *E2) cbrtFrobenius1bit(x *E2) *E2 {
@@ -320,9 +314,8 @@ func (z *E2) cbrtFrobenius1bit(x *E2) *E2 {
 		z.A1.SetZero()
 		return z
 	}
-	var y E2
-	y.expByE2CbrtFrobenius1bit(*x)
-	return z.cbrtVerifyAndAdjust(x, &y)
+	z.expByE2CbrtFrobenius1bit(*x)
+	return z.cbrtVerify(x)
 }
 
 func (z *E2) expByE2CbrtFrobenius1bit(x E2) *E2 {

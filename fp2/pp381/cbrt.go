@@ -49,19 +49,19 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 		return nil
 	}
 
-	var alphaT fp.Element
-	alphaT.Sub(&x0sq, &x1sq)
-	alphaT.Double(&alphaT)
-	alphaT.Mul(&alphaT, &normInv)
+	var tau fp.Element
+	tau.Sub(&x0sq, &x1sq)
+	tau.Double(&tau)
+	tau.Mul(&tau, &normInv)
 
-	sp := lucasV(&alphaT)
+	sigma := lucasV(&tau)
 
-	var one, s1m1, s1p1, d0, d1, d0d1, d0d1Inv fp.Element
+	var one, sigmaM1, sigmaP1, d0, d1, d0d1, d0d1Inv fp.Element
 	one.SetOne()
-	s1m1.Sub(&sp, &one)
-	s1p1.Add(&sp, &one)
-	d0.Mul(&m, &s1m1)
-	d1.Mul(&m, &s1p1)
+	sigmaM1.Sub(&sigma, &one)
+	sigmaP1.Add(&sigma, &one)
+	d0.Mul(&m, &sigmaM1)
+	d1.Mul(&m, &sigmaP1)
 
 	d0d1.Mul(&d0, &d1)
 	d0d1Inv.Inverse(&d0d1)
@@ -353,19 +353,19 @@ func (z *E2) cbrtTorusPrac(x *E2) *E2 {
 		return nil
 	}
 
-	var alphaT fp.Element
-	alphaT.Sub(&x0sq, &x1sq)
-	alphaT.Double(&alphaT)
-	alphaT.Mul(&alphaT, &normInv)
+	var tau fp.Element
+	tau.Sub(&x0sq, &x1sq)
+	tau.Double(&tau)
+	tau.Mul(&tau, &normInv)
 
-	sp := lucasVPrac(&alphaT)
+	sigma := lucasVPrac(&tau)
 
-	var one, s1m1, s1p1, d0, d1, d0d1, d0d1Inv fp.Element
+	var one, sigmaM1, sigmaP1, d0, d1, d0d1, d0d1Inv fp.Element
 	one.SetOne()
-	s1m1.Sub(&sp, &one)
-	s1p1.Add(&sp, &one)
-	d0.Mul(&m, &s1m1)
-	d1.Mul(&m, &s1p1)
+	sigmaM1.Sub(&sigma, &one)
+	sigmaP1.Add(&sigma, &one)
+	d0.Mul(&m, &sigmaM1)
+	d1.Mul(&m, &sigmaP1)
 
 	d0d1.Mul(&d0, &d1)
 	d0d1Inv.Inverse(&d0d1)
