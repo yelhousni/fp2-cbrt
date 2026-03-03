@@ -5,7 +5,7 @@
 </p>
 
 
-Companion code for *"Fast cube roots in Fp2 via the algebraic torus"*.
+Companion code for *"Fast cube roots in Fp2 via the algebraic torus"* (https://ia.cr/2026/392).
 
 ## Methods
 
