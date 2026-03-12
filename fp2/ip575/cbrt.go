@@ -160,7 +160,7 @@ func cbrtAndNormInverse(norm *fp.Element) (m, normInv fp.Element, ok bool) {
 	return m, normInv, true
 }
 
-func lucasV(alpha *fp.Element) fp.Element {
+func lucasV2(alpha *fp.Element) (fp.Element, fp.Element) {
 	var v0, v1, two fp.Element
 	two.SetUint64(2)
 	v0.Set(alpha)
@@ -178,8 +178,110 @@ func lucasV(alpha *fp.Element) fp.Element {
 			v1.Square(&v1).Sub(&v1, &two)
 		}
 	}
-	v0.Mul(&v0, &v1).Sub(&v0, alpha)
-	return v0
+	var Te, Te1 fp.Element
+	Te.Mul(&v0, &v1).Sub(&Te, alpha)
+	Te1.Square(&v1).Sub(&Te1, &two)
+	return Te, Te1
+}
+
+func lucasV(alpha *fp.Element) fp.Element {
+	Te, _ := lucasV2(alpha)
+	return Te
+}
+
+// cbrtOkeyaSakurai implements Ben Smith's Okeya-Sakurai-style recovery.
+func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
+	if x.A1.IsZero() {
+		if z.A0.Cbrt(&x.A0) == nil {
+			return nil
+		}
+		z.A1.SetZero()
+		return z
+	}
+
+	if x.A0.IsZero() {
+		var negA1 fp.Element
+		negA1.Neg(&x.A1)
+		var y E2
+		if y.A1.Cbrt(&negA1) == nil {
+			return nil
+		}
+		y.A0.SetZero()
+		return z.cbrtVerifyAndAdjust(x, &y)
+	}
+
+	var x0sq, x1sq, norm fp.Element
+	x0sq.Square(&x.A0)
+	x1sq.Square(&x.A1)
+	norm.Add(&x0sq, &x1sq)
+
+	// U = -16·n·x0²·x1²
+	var x0x1, U fp.Element
+	x0x1.Mul(&x.A0, &x.A1)
+	U.Square(&x0x1)
+	U.Mul(&U, &norm)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U)
+	U.Neg(&U)
+
+	var UInv fp.Element
+	UInv.Inverse(&U)
+
+	m, normInv, ok := cbrtAndNormInverse(&norm)
+	if !ok {
+		return nil
+	}
+
+	// DeltaInv = n³·U⁻¹
+	var n2, n3, deltaInv fp.Element
+	n2.Square(&norm)
+	n3.Mul(&n2, &norm)
+	deltaInv.Mul(&n3, &UInv)
+
+	var halfTau, tau fp.Element
+	halfTau.Sub(&x0sq, &x1sq)
+	halfTau.Mul(&halfTau, &normInv)
+	tau.Double(&halfTau)
+
+	Te, Te1 := lucasV2(&tau)
+
+	var imY fp.Element
+	imY.Double(&x0x1)
+	imY.Mul(&imY, &normInv)
+
+	var WA0, WA1 fp.Element
+	WA0.Mul(&halfTau, &Te)
+	WA0.Sub(&Te1, &WA0)
+	WA1.Mul(&imY, &Te)
+
+	var sIm, k fp.Element
+	sIm.Double(&imY)
+	k.Mul(&sIm, &deltaInv)
+
+	var gamma E2
+	gamma.A0.Mul(&WA1, &k)
+	gamma.A0.Neg(&gamma.A0)
+	gamma.A1.Mul(&WA0, &k)
+
+	var mInv fp.Element
+	mInv.Square(&m)
+	mInv.Mul(&mInv, &normInv)
+
+	var y E2
+	var t1, t2 fp.Element
+	t1.Mul(&x.A0, &gamma.A0)
+	t2.Mul(&x.A1, &gamma.A1)
+	y.A0.Add(&t1, &t2)
+	y.A0.Mul(&y.A0, &mInv)
+
+	t1.Mul(&x.A1, &gamma.A0)
+	t2.Mul(&x.A0, &gamma.A1)
+	y.A1.Sub(&t1, &t2)
+	y.A1.Mul(&y.A1, &mInv)
+
+	return z.cbrtVerifyAndAdjust(x, &y)
 }
 
 func (z *E2) cbrtDirect(x *E2) *E2 {

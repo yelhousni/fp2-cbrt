@@ -128,15 +128,16 @@ func cbrtAndNormInverse(norm *fp.Element) (m, normInv fp.Element) {
 	return m, normInv
 }
 
-// lucasV computes V_e(alpha, 1) where e = 3⁻¹ mod (p+1).
-func lucasV(alpha *fp.Element) fp.Element {
+// lucasV2 returns both T_e = V_e(alpha) and T_{e+1} = V_{e+1}(alpha)
+// where e is the lucasExponent. The final bit (bit 0 = 1) is handled
+// explicitly to preserve both ladder outputs.
+func lucasV2(alpha *fp.Element) (fp.Element, fp.Element) {
 	var v0, v1, two fp.Element
 	two.SetUint64(2)
 	v0.Set(alpha)
 	v1.Square(alpha).Sub(&v1, &two)
 
 	var prod fp.Element
-
 	for i := 375 - 1; i >= 1; i-- {
 		bit := (lucasExponent[i/64] >> uint(i%64)) & 1
 		prod.Mul(&v0, &v1).Sub(&prod, alpha)
@@ -148,10 +149,17 @@ func lucasV(alpha *fp.Element) fp.Element {
 			v1.Square(&v1).Sub(&v1, &two)
 		}
 	}
+	// bit 0 = 1: T_e = v0*v1 - alpha, T_{e+1} = v1² - 2
+	var Te, Te1 fp.Element
+	Te.Mul(&v0, &v1).Sub(&Te, alpha)
+	Te1.Square(&v1).Sub(&Te1, &two)
+	return Te, Te1
+}
 
-	// Last bit (bit 0) is 1
-	v0.Mul(&v0, &v1).Sub(&v0, alpha)
-	return v0
+// lucasV computes V_e(alpha, 1) where e = 3⁻¹ mod (p+1).
+func lucasV(alpha *fp.Element) fp.Element {
+	Te, _ := lucasV2(alpha)
+	return Te
 }
 
 // CbrtDirect computes the cube root using direct E2 exponentiation for benchmarking comparison.
@@ -302,6 +310,125 @@ func (z *E2) cbrtTorusPrac(x *E2) *E2 {
 
 	z.A0.Mul(&d1, &d0d1Inv).Mul(&z.A0, &x.A0)
 	z.A1.Mul(&d0, &d0d1Inv).Mul(&z.A1, &x.A1)
+
+	return z.cbrtVerify(x)
+}
+
+// cbrtOkeyaSakurai implements Okeya-Sakurai-style recovery for cube root in Fp2.
+// For β = -5 (BLS12-377): norm = x0² + 5·x1², U = -80·n·x0²·x1².
+func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
+	if x.A1.IsZero() {
+		if z.A0.Cbrt(&x.A0) == nil {
+			return nil
+		}
+		z.A1.SetZero()
+		return z
+	}
+
+	if x.A0.IsZero() {
+		var negA1OverBeta fp.Element
+		betaInvNeg := fp.Element{
+			330620507644336508,
+			9878087358076053079,
+			11461392860540703536,
+			6973035786057818995,
+			8846909097162646007,
+			104838758629667239,
+		}
+		negA1OverBeta.Neg(&x.A1)
+		negA1OverBeta.Mul(&negA1OverBeta, &betaInvNeg)
+		if z.A1.Cbrt(&negA1OverBeta) == nil {
+			return nil
+		}
+		z.A0.SetZero()
+		return z.cbrtVerify(x)
+	}
+
+	var x0sq, x1sq fp.Element
+	x0sq.Square(&x.A0)
+	x1sq.Square(&x.A1)
+	var norm, betaX1sq fp.Element
+	betaX1sq.Set(&x1sq)
+	fp.MulBy5(&betaX1sq)
+	norm.Add(&x0sq, &betaX1sq)
+
+	// U = -16·|β|·n·x0²·x1² = -80·n·x0²·x1² for β=-5
+	var x0x1, U fp.Element
+	x0x1.Mul(&x.A0, &x.A1)
+	U.Square(&x0x1)
+	U.Mul(&U, &norm)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U) // ×16
+	fp.MulBy5(&U) // ×80
+	U.Neg(&U)     // U = -80·n·x0²·x1²
+
+	// Pre-ladder inversion
+	var UInv fp.Element
+	UInv.Inverse(&U)
+
+	m, normInv := cbrtAndNormInverse(&norm)
+
+	// DeltaInv = n³/U
+	var n2, n3, deltaInv fp.Element
+	n2.Square(&norm)
+	n3.Mul(&n2, &norm)
+	deltaInv.Mul(&n3, &UInv)
+
+	// tau = 2·(x0² - |β|·x1²)/n
+	var halfTau, tau fp.Element
+	halfTau.Sub(&x0sq, &betaX1sq)
+	halfTau.Mul(&halfTau, &normInv)
+	tau.Double(&halfTau)
+
+	Te, Te1 := lucasV2(&tau)
+
+	// Im(y) = -2·x0·x1/n (same for all β)
+	var imY fp.Element
+	imY.Double(&x0x1)
+	imY.Mul(&imY, &normInv)
+
+	// W = T_{e+1} - y⁻¹·T_e
+	// W.A0 = T_{e+1} - Re(y)·T_e
+	// W.A1 = Im(y)·T_e
+	var WA0, WA1 fp.Element
+	WA0.Mul(&halfTau, &Te)
+	WA0.Sub(&Te1, &WA0)
+	WA1.Mul(&imY, &Te)
+
+	// gamma = W·s/Delta
+	// s = (0, 2·Im(y)), W·s = (β·WA1·sIm, WA0·sIm)
+	// For β=-5: gamma.A0 = -5·WA1·k, gamma.A1 = WA0·k
+	var sIm, k fp.Element
+	sIm.Double(&imY)
+	k.Mul(&sIm, &deltaInv)
+
+	var gamma E2
+	gamma.A0.Mul(&WA1, &k)
+	fp.MulBy5(&gamma.A0)
+	gamma.A0.Neg(&gamma.A0)
+	gamma.A1.Mul(&WA0, &k)
+
+	// mInv = m²/n (since m³ = n)
+	var mInv fp.Element
+	mInv.Square(&m)
+	mInv.Mul(&mInv, &normInv)
+
+	// z = x·conj(gamma)/m
+	// x·conj(gamma) = (x0·g0 - β·x1·(-g1), x1·g0 - x0·g1)
+	// For β=-5: (x0·g0 + 5·x1·g1, x1·g0 - x0·g1)
+	var t1, t2 fp.Element
+	t1.Mul(&x.A0, &gamma.A0)
+	t2.Mul(&x.A1, &gamma.A1)
+	fp.MulBy5(&t2)
+	z.A0.Add(&t1, &t2)
+	z.A0.Mul(&z.A0, &mInv)
+
+	t1.Mul(&x.A1, &gamma.A0)
+	t2.Mul(&x.A0, &gamma.A1)
+	z.A1.Sub(&t1, &t2)
+	z.A1.Mul(&z.A1, &mInv)
 
 	return z.cbrtVerify(x)
 }

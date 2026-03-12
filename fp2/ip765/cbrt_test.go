@@ -226,6 +226,39 @@ func BenchmarkCbrtFrobenius1bit(b *testing.B) {
 }
 
 
+func TestCbrtOkeyaSakuraiVsTorus(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		var a, x E2
+		a.SetRandom()
+		x.Square(&a)
+		x.Mul(&x, &a)
+
+		var z1, z2 E2
+		r1 := z1.Cbrt(&x)
+		r2 := z2.cbrtOkeyaSakurai(&x)
+		if r1 == nil || r2 == nil {
+			t.Fatalf("one method returned nil (iter %d)", i)
+		}
+		var c1, c2 E2
+		c1.Square(&z1).Mul(&c1, &z1)
+		c2.Square(&z2).Mul(&c2, &z2)
+		if !c1.Equal(&x) || !c2.Equal(&x) {
+			t.Fatalf("cube root verification failed (iter %d)", i)
+		}
+	}
+}
+
+func BenchmarkCbrtOkeyaSakurai(b *testing.B) {
+	var a, x E2
+	a.SetRandom()
+	x.Square(&a)
+	x.Mul(&x, &a)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		a.cbrtOkeyaSakurai(&x)
+	}
+}
+
 func TestCbrtAllMethods(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		var a, x E2
@@ -233,7 +266,7 @@ func TestCbrtAllMethods(t *testing.T) {
 		x.Square(&a)
 		x.Mul(&x, &a)
 
-		var z [5]E2
+		var z [6]E2
 		methods := []struct {
 			name string
 			fn   func(*E2, *E2) *E2
@@ -243,6 +276,7 @@ func TestCbrtAllMethods(t *testing.T) {
 			{"cbrtFrobenius", (*E2).cbrtFrobenius},
 			{"cbrtFrobenius1bit", (*E2).cbrtFrobenius1bit},
 			{"cbrtTorusPrac", (*E2).cbrtTorusPrac},
+			{"cbrtOkeyaSakurai", (*E2).cbrtOkeyaSakurai},
 		}
 
 		for j, m := range methods {

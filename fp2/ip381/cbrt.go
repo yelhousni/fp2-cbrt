@@ -1,7 +1,6 @@
 package ip381
 
 import (
-
 	fp "github.com/yelhousni/fp2-cbrt/fp/ip381"
 )
 
@@ -70,6 +69,131 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 	var y E2
 	y.A0.Mul(&d1, &d0d1Inv).Mul(&y.A0, &x.A0)
 	y.A1.Mul(&d0, &d0d1Inv).Mul(&y.A1, &x.A1)
+
+	return z.cbrtVerifyAndAdjust(x, &y)
+}
+
+// cbrtOkeyaSakurai implements Ben Smith's Okeya-Sakurai-style recovery.
+//
+// Given x = (x0, x1) with norm n = x0²+x1², trace t = 2x0, and
+// y = x/conj(x) (torus element), it computes y^e via:
+//
+//	W := T_{e+1} - y⁻¹·T_e  =  s·y^e
+//	y^e = W · s / Delta       (since 1/s = s/Delta with Delta = s²)
+//
+// The key insight: Delta = (t/n)²·(t²-4n) and U = n·t²·(t²-4n) are
+// known before the ladder, so Inverse(U) is a PRE-ladder inversion
+// (unlike cbrtTorus where the inversion is post-ladder).
+func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
+	if x.A1.IsZero() {
+		if z.A0.Cbrt(&x.A0) == nil {
+			return nil
+		}
+		z.A1.SetZero()
+		return z
+	}
+
+	if x.A0.IsZero() {
+		var negA1 fp.Element
+		negA1.Neg(&x.A1)
+		var y E2
+		if y.A1.Cbrt(&negA1) == nil {
+			return nil
+		}
+		y.A0.SetZero()
+		return z.cbrtVerifyAndAdjust(x, &y)
+	}
+
+	var x0sq, x1sq, norm fp.Element
+	x0sq.Square(&x.A0)
+	x1sq.Square(&x.A1)
+	norm.Add(&x0sq, &x1sq)
+
+	// U = n·t²·(t²-4n) = n·4x0²·(-4x1²) = -16·n·x0²·x1²
+	// All quantities known before exponentiation and ladder.
+	var x0x1, U fp.Element
+	x0x1.Mul(&x.A0, &x.A1)
+	U.Square(&x0x1)
+	U.Mul(&U, &norm)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U)
+	U.Double(&U)
+	U.Neg(&U) // U = -16·n·x0²·x1²
+
+	// Pre-ladder inversion (not blocked on any ladder output)
+	var UInv fp.Element
+	UInv.Inverse(&U)
+
+	// Exponentiation of norm → m = cbrt(norm), normInv
+	m, normInv, ok := cbrtAndNormInverse(&norm)
+	if !ok {
+		return nil
+	}
+
+	// DeltaInv = n³·U⁻¹
+	// (since Delta = t²(t²-4n)/n² and U = n·t²·(t²-4n), so 1/Delta = n³·U⁻¹)
+	var n2, n3, deltaInv fp.Element
+	n2.Square(&norm)
+	n3.Mul(&n2, &norm)
+	deltaInv.Mul(&n3, &UInv)
+
+	// tau = T_1 = y + y⁻¹ = 2(x0²-x1²)/n
+	// halfTau = tau/2 = (x0²-x1²)/n = Re(y)
+	var halfTau, tau fp.Element
+	halfTau.Sub(&x0sq, &x1sq)
+	halfTau.Mul(&halfTau, &normInv)
+	tau.Double(&halfTau)
+
+	// Ladder → T_e, T_{e+1}
+	Te, Te1 := lucasV2(&tau)
+
+	// Im(y) = 2·x0·x1/n
+	var imY fp.Element
+	imY.Double(&x0x1)
+	imY.Mul(&imY, &normInv)
+
+	// W = T_{e+1} - y⁻¹·T_e  where y⁻¹ = (Re(y), -Im(y))
+	// W.A0 = T_{e+1} - Re(y)·T_e
+	// W.A1 = Im(y)·T_e
+	var WA0, WA1 fp.Element
+	WA0.Mul(&halfTau, &Te)
+	WA0.Sub(&Te1, &WA0)
+	WA1.Mul(&imY, &Te)
+
+	// gamma = y^e = W·s·DeltaInv
+	// s = (0, 2·Im(y)) as Fp2, so s_im = 2·Im(y) = 4·x0·x1/n
+	// W·s = (W.A0 + W.A1·u)·(s_im·u) = (-W.A1·s_im, W.A0·s_im)
+	// gamma = (-W.A1·s_im·DeltaInv, W.A0·s_im·DeltaInv)
+	var sIm, k fp.Element
+	sIm.Double(&imY)
+	k.Mul(&sIm, &deltaInv)
+
+	var gamma E2
+	gamma.A0.Mul(&WA1, &k)
+	gamma.A0.Neg(&gamma.A0)
+	gamma.A1.Mul(&WA0, &k)
+
+	// Recover z = cbrt(x) from gamma = y^e (torus representation)
+	// gamma = z/conj(z), N(z) = m, so z² = m·gamma
+	// z = x·conj(gamma)/m  (since x = z³, gamma has norm 1)
+	// mInv = m²·normInv  (since m³ = n)
+	var mInv fp.Element
+	mInv.Square(&m)
+	mInv.Mul(&mInv, &normInv)
+
+	// x·conj(gamma) = (x0·g0 + x1·g1, x1·g0 - x0·g1)
+	var y E2
+	var t1, t2 fp.Element
+	t1.Mul(&x.A0, &gamma.A0)
+	t2.Mul(&x.A1, &gamma.A1)
+	y.A0.Add(&t1, &t2)
+	y.A0.Mul(&y.A0, &mInv)
+
+	t1.Mul(&x.A1, &gamma.A0)
+	t2.Mul(&x.A0, &gamma.A1)
+	y.A1.Sub(&t1, &t2)
+	y.A1.Mul(&y.A1, &mInv)
 
 	return z.cbrtVerifyAndAdjust(x, &y)
 }
@@ -184,7 +308,10 @@ func cbrtAndNormInverse(norm *fp.Element) (m, normInv fp.Element, ok bool) {
 	return m, normInv, true
 }
 
-func lucasV(alpha *fp.Element) fp.Element {
+// lucasV2 returns both T_e = V_e(alpha) and T_{e+1} = V_{e+1}(alpha)
+// where e is the lucasExponent. The final bit (bit 0 = 1) is handled
+// explicitly to preserve both ladder outputs.
+func lucasV2(alpha *fp.Element) (fp.Element, fp.Element) {
 	var v0, v1, two fp.Element
 	two.SetUint64(2)
 	v0.Set(alpha)
@@ -202,8 +329,16 @@ func lucasV(alpha *fp.Element) fp.Element {
 			v1.Square(&v1).Sub(&v1, &two)
 		}
 	}
-	v0.Mul(&v0, &v1).Sub(&v0, alpha)
-	return v0
+	// bit 0 = 1: T_e = v0*v1 - alpha, T_{e+1} = v1² - 2
+	var Te, Te1 fp.Element
+	Te.Mul(&v0, &v1).Sub(&Te, alpha)
+	Te1.Square(&v1).Sub(&Te1, &two)
+	return Te, Te1
+}
+
+func lucasV(alpha *fp.Element) fp.Element {
+	Te, _ := lucasV2(alpha)
+	return Te
 }
 
 func (z *E2) cbrtDirect(x *E2) *E2 {
@@ -373,9 +508,9 @@ func (z *E2) expByE2CbrtFrobenius1bit(x E2) *E2 {
 	xFrob.Conjugate(&x)
 
 	var table [3]E2
-	table[0].Set(&xFrob)      // (0,1)
-	table[1].Set(&x)          // (1,0)
-	table[2].Mul(&x, &xFrob)  // (1,1)
+	table[0].Set(&xFrob)     // (0,1)
+	table[1].Set(&x)         // (1,0)
+	table[2].Mul(&x, &xFrob) // (1,1)
 
 	z.SetOne()
 
