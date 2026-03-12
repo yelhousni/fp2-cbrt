@@ -1,5 +1,8 @@
-// Package main generates cbrt.go, prac.go, and cbrt_test.go for each Fp2 field
-// from a single set of templates, deduplicating the algorithmic framework.
+//go:generate go run .
+
+// Package main generates cbrt.go, cbrt_addchain.go, prac.go, and cbrt_test.go
+// for each Fp2 field from a single set of templates, deduplicating the
+// algorithmic framework.
 //
 // Usage:
 //
@@ -9,9 +12,18 @@ package main
 import (
 	"embed"
 	"fmt"
+	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 	"text/template"
+
+	"github.com/mmcloughlin/addchain/alg/ensemble"
+	"github.com/mmcloughlin/addchain/alg/exec"
+
+	"github.com/mmcloughlin/addchain/acc"
+	"github.com/mmcloughlin/addchain/acc/ir"
+	"github.com/mmcloughlin/addchain/acc/pass"
 )
 
 //go:embed template/*.tmpl
@@ -49,6 +61,12 @@ type CbrtConfig struct {
 	HasFrobeniusOddAlign   bool // fields with odd bit count
 	FrobeniusOddAlignShift int  // bit shift for odd alignment (e.g. 60, 58)
 
+	// E2 direct exponentiation (addition chain)
+	E2CbrtExponent  string      // hex string of 3⁻¹ mod ((p²-1)/3) or variant
+	AddChainData    *ir.Program // populated at generation time
+	AddChainSquares int         // number of squarings
+	AddChainMuls    int         // number of multiplications
+
 	// PRAC
 	PracBitComment   string // e.g. "380 bits"
 	PracOpsLen       int
@@ -67,33 +85,156 @@ var configs = []CbrtConfig{
 	configPP381(),
 }
 
+// moduleRoot walks up from the current directory to find go.mod.
+func moduleRoot() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			log.Fatal("could not find go.mod")
+		}
+		dir = parent
+	}
+}
+
 func main() {
+	root := moduleRoot()
+
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
+		"add_": func(op ir.Op) ir.Op {
+			if a, ok := op.(ir.Add); ok {
+				return a
+			}
+			return nil
+		},
+		"double_": func(op ir.Op) ir.Op {
+			if d, ok := op.(ir.Double); ok {
+				return d
+			}
+			return nil
+		},
+		"shift_": func(op ir.Op) ir.Op {
+			if s, ok := op.(ir.Shift); ok {
+				return s
+			}
+			return nil
+		},
+		"ref": func(o ir.Operand) string {
+			if o.Identifier == "z" {
+				return "z"
+			}
+			return "&" + o.Identifier
+		},
 	}
 
 	cbrtTmpl := template.Must(template.New("cbrt.go.tmpl").Funcs(funcMap).ParseFS(tmplFS, "template/cbrt.go.tmpl"))
 	pracTmpl := template.Must(template.New("prac.go.tmpl").Funcs(funcMap).ParseFS(tmplFS, "template/prac.go.tmpl"))
 	testTmpl := template.Must(template.New("cbrt_test.go.tmpl").Funcs(funcMap).ParseFS(tmplFS, "template/cbrt_test.go.tmpl"))
+	addchainTmpl := template.Must(template.New("cbrt_addchain.go.tmpl").Funcs(funcMap).ParseFS(tmplFS, "template/cbrt_addchain.go.tmpl"))
 
-	for _, cfg := range configs {
-		dir := filepath.Join("fp2", cfg.Package)
+	for i := range configs {
+		cfg := &configs[i]
 
-		if err := generateFile(cbrtTmpl, "cbrt.go.tmpl", filepath.Join(dir, "cbrt.go"), cfg); err != nil {
+		// Compute addition chain for E2 cbrt exponent
+		if cfg.E2CbrtExponent != "" {
+			n := new(big.Int)
+			if _, ok := n.SetString(cfg.E2CbrtExponent, 16); !ok {
+				log.Fatalf("%s: invalid E2CbrtExponent hex", cfg.Package)
+			}
+			cfg.AddChainData = computeAddChain(n)
+			cfg.AddChainSquares, cfg.AddChainMuls = countOps(cfg.AddChainData)
+			squares, muls := cfg.AddChainSquares, cfg.AddChainMuls
+			fmt.Printf("  %s: addition chain found (%d squares, %d multiplies)\n",
+				cfg.Package, squares, muls)
+		}
+
+		dir := filepath.Join(root, "fp2", cfg.Package)
+
+		if err := generateFile(cbrtTmpl, "cbrt.go.tmpl", filepath.Join(dir, "cbrt.go"), *cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "%s/cbrt.go: %v\n", dir, err)
 			os.Exit(1)
 		}
-		if err := generateFile(pracTmpl, "prac.go.tmpl", filepath.Join(dir, "prac.go"), cfg); err != nil {
+		if err := generateFile(pracTmpl, "prac.go.tmpl", filepath.Join(dir, "prac.go"), *cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "%s/prac.go: %v\n", dir, err)
 			os.Exit(1)
 		}
-		if err := generateFile(testTmpl, "cbrt_test.go.tmpl", filepath.Join(dir, "cbrt_test.go"), cfg); err != nil {
+		if err := generateFile(testTmpl, "cbrt_test.go.tmpl", filepath.Join(dir, "cbrt_test.go"), *cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "%s/cbrt_test.go: %v\n", dir, err)
 			os.Exit(1)
 		}
+		if cfg.AddChainData != nil {
+			if err := generateFile(addchainTmpl, "cbrt_addchain.go.tmpl", filepath.Join(dir, "cbrt_addchain.go"), *cfg); err != nil {
+				fmt.Fprintf(os.Stderr, "%s/cbrt_addchain.go: %v\n", dir, err)
+				os.Exit(1)
+			}
+		}
 
-		fmt.Printf("generated %s/{cbrt,prac,cbrt_test}.go\n", dir)
+		relDir := filepath.Join("fp2", cfg.Package)
+		fmt.Printf("generated %s/{cbrt,prac,cbrt_addchain,cbrt_test}.go\n", relDir)
 	}
+}
+
+// computeAddChain searches for an optimal addition chain for n
+// and returns the IR program with temporaries allocated.
+func computeAddChain(n *big.Int) *ir.Program {
+	algorithms := ensemble.Ensemble()
+	ex := exec.NewParallel()
+	results := ex.Execute(n, algorithms)
+
+	best := 0
+	for i, r := range results {
+		if r.Err != nil {
+			continue
+		}
+		if len(results[i].Program) < len(results[best].Program) {
+			best = i
+		}
+	}
+	if results[best].Err != nil {
+		log.Fatalf("addchain search failed: %v", results[best].Err)
+	}
+
+	// Decompile to IR
+	p, err := acc.Decompile(results[best].Program)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Allocate temporaries
+	allocator := pass.Allocator{
+		Input:  "x",
+		Output: "z",
+		Format: "t%d",
+	}
+	if err := pass.Exec(p, allocator, pass.Func(pass.Eval)); err != nil {
+		log.Fatal(err)
+	}
+
+	return p
+}
+
+// countOps counts the number of squarings and multiplications in an IR program.
+func countOps(p *ir.Program) (squares, muls int) {
+	for _, inst := range p.Instructions {
+		switch op := inst.Op.(type) {
+		case ir.Add:
+			_ = op
+			muls++
+		case ir.Double:
+			_ = op
+			squares++
+		case ir.Shift:
+			squares += int(op.S)
+		}
+	}
+	return
 }
 
 func generateFile(t *template.Template, name, path string, cfg CbrtConfig) error {
@@ -114,6 +255,7 @@ func configIP381() CbrtConfig {
 		NbLimbs:  6,
 		Beta:     -1,
 		PMod9:    4,
+		E2CbrtExponent: "52e2c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c10aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[6]uint64{
 	12297829382473034411,
 	12297829382473034410,
@@ -202,6 +344,7 @@ func configIP575() CbrtConfig {
 		NbLimbs:  9,
 		Beta:     -1,
 		PMod9:    4,
+		E2CbrtExponent: "218b1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71b7aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[9]uint64{
 	12297829382473034411,
 	12297829382473034410,
@@ -308,6 +451,7 @@ func configIP765() CbrtConfig {
 		NbLimbs:  12,
 		Beta:     -1,
 		PMod9:    4,
+		E2CbrtExponent: "1caac71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c38aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[12]uint64{
 	12297829382473034411,
 	12297829382473034410,
@@ -434,6 +578,7 @@ func configPP254() CbrtConfig {
 		NbLimbs:  4,
 		Beta:     -1,
 		PMod9:    1,
+		E2CbrtExponent: "ad76de41a5af60ea315d97688a2286dda209e0149bcd7bb708258216df4faba1830243f61450cc77484dacc5bf5165ad7b68d3edc5898e503f230287a81acb",
 		LucasExponent: `[4]uint64{
 	7593120314996402627,
 	15936870763965662084,
@@ -566,6 +711,7 @@ func configPP377() CbrtConfig {
 		NbLimbs:  6,
 		Beta:     -5,
 		PMod9:    7,
+		E2CbrtExponent: "a0ac6746271b5cf6caf0d2875dd4829ad3aa2498a59c3fdc192af14cf4bf1ea0057c62016ad86392de0411d082fb9dc97b4257efc987277279f04c87e65bdf10e2a07dc3f1e965f796ca7c063000199ad968355555559075aaaaaaaaaaab",
 		LucasExponent: `[6]uint64{
 	3195374304363544577,
 	553507811686875136,
@@ -665,6 +811,7 @@ func configPP381() CbrtConfig {
 		NbLimbs:  6,
 		Beta:     -1,
 		PMod9:    1,
+		E2CbrtExponent: "190b8ad76f8849c0701770fc867ca9d8feb0087bcb44fd3337e96b01f2e8bbdd0fa2d9f75d8c3cff998773ab047aa139fa626e17edf07656dbcc0fb8513ed34fa847c66a9bea57d169eef1e7300bbd895e206963317cfcdb818e38e49be8d3",
 		LucasExponent: `[6]uint64{
 	10616391696595805071,
 	736713837172402858,
