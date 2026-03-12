@@ -67,6 +67,10 @@ type CbrtConfig struct {
 	AddChainSquares int         // number of squarings
 	AddChainMuls    int         // number of multiplications
 
+	// Hamburg merged exponentiation (Okeya-Sakurai + Hamburg trick)
+	HamburgExpHelper       string // e.g. "ExpByCbrtHelperQMinus4Div9"
+	HamburgCbrtAndWInvBody string // raw Go: given tw, w → compute cbrtW, wInv
+
 	// PRAC
 	PracBitComment   string // e.g. "380 bits"
 	PracOpsLen       int
@@ -334,6 +338,19 @@ func configIP381() CbrtConfig {
 	0x83, 0x83, 0x86, 0x01, 0x03, 0x83, 0x03, 0x03, 0x87, 0x07, 0x06, 0x06, 0x03, 0x03, 0x03, 0x83, 0x83, 0x83, 0x01, 0x03,
 	0x0a,`,
 		PracStartIndex: 1,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus4Div9(w)
+	var tw2 fp.Element
+	tw2.Square(&tw)
+	cbrtW.Mul(&w, &tw2)
+
+	var cw2 fp.Element
+	cw2.Square(&cbrtW)
+	var tw4 fp.Element
+	tw4.Square(&tw2)
+	wInv.Mul(&tw4, &tw)
+	wInv.Mul(&wInv, &cw2)`,
 	}
 }
 
@@ -441,6 +458,19 @@ func configIP575() CbrtConfig {
 	0x03, 0x83, 0x03, 0x83, 0x83, 0x03, 0x83, 0x83, 0x83, 0x03, 0x83, 0x03, 0x83, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x83,
 	0x03, 0x0a,`,
 		PracStartIndex: 1,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus4Div9(w)
+	var tw2 fp.Element
+	tw2.Square(&tw)
+	cbrtW.Mul(&w, &tw2)
+
+	var cw2 fp.Element
+	cw2.Square(&cbrtW)
+	var tw4 fp.Element
+	tw4.Square(&tw2)
+	wInv.Mul(&tw4, &tw)
+	wInv.Mul(&wInv, &cw2)`,
 	}
 }
 
@@ -568,6 +598,19 @@ func configIP765() CbrtConfig {
 	0x83, 0x83, 0x03, 0x03, 0x81, 0x03, 0x83, 0x03, 0x03, 0x83, 0x83, 0x84, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x03, 0x87,
 	0x83, 0x83, 0x03, 0x03, 0x86, 0x03, 0x03, 0x83, 0x83, 0x03, 0x84, 0x05, 0x03, 0x03, 0x03, 0x0a,`,
 		PracStartIndex: 1,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus4Div9(w)
+	var tw2 fp.Element
+	tw2.Square(&tw)
+	cbrtW.Mul(&w, &tw2)
+
+	var cw2 fp.Element
+	cw2.Square(&cbrtW)
+	var tw4 fp.Element
+	tw4.Square(&tw2)
+	wInv.Mul(&tw4, &tw)
+	wInv.Mul(&wInv, &cw2)`,
 	}
 }
 
@@ -701,6 +744,24 @@ func configPP254() CbrtConfig {
 	0x03, 0x83, 0x86, 0x06, 0x03, 0x03, 0x83, 0x84, 0x04, 0x04, 0x03, 0x03, 0x83, 0x01, 0x03, 0x83, 0x83, 0x03, 0x03, 0x85,
 	0x05, 0x03, 0x03, 0x0a,`,
 		PracStartIndex: 1,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus19Div27",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus19Div27(w)
+	cbrtW.Mul(&w, &tw)
+
+	var cw2 fp.Element
+	cw2.Square(&cbrtW)
+	var tw2, tw4, tw8 fp.Element
+	tw2.Square(&tw)
+	tw4.Square(&tw2)
+	tw8.Square(&tw4)
+	wInv.Mul(&tw8, &tw2) // tw^10
+	var cw4, cw8, cw16, cw17 fp.Element
+	cw4.Square(&cw2)
+	cw8.Square(&cw4)
+	cw16.Square(&cw8)
+	cw17.Mul(&cw16, &cbrtW)
+	wInv.Mul(&wInv, &cw17)`,
 	}
 }
 
@@ -801,6 +862,20 @@ func configPP377() CbrtConfig {
 	0x83, 0x03, 0x03, 0x83, 0x83, 0x03, 0x03, 0x83, 0x83, 0x83, 0x85, 0x04, 0x03, 0x03, 0x01, 0x03, 0x81, 0x03, 0x83, 0x83,
 	0x03, 0x85, 0x03, 0x03, 0x87, 0x07, 0x03, 0x03, 0x83, 0x03, 0x86, 0x81, 0x03, 0x83, 0x83, 0x83, 0x83, 0x0a,`,
 		PracStartIndex: 7,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus7Div9",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus7Div9(w)
+	cbrtW.Mul(&w, &tw)
+
+	var cw2, cw4 fp.Element
+	cw2.Square(&cbrtW)
+	cw4.Square(&cw2)
+	var cw5 fp.Element
+	cw5.Mul(&cw4, &cbrtW)
+	var tw2, tw4 fp.Element
+	tw2.Square(&tw)
+	tw4.Square(&tw2)
+	wInv.Mul(&cw5, &tw4)`,
 	}
 }
 
@@ -955,5 +1030,22 @@ func configPP381() CbrtConfig {
 	0x05, 0x04, 0x03, 0x03, 0x03, 0x83, 0x81, 0x03, 0x83, 0x01, 0x03, 0x83, 0x85, 0x05, 0x04, 0x04, 0x05, 0x05, 0x05, 0x04,
 	0x03, 0x03, 0x83, 0x85, 0x04, 0x03, 0x03, 0x83, 0x83, 0x85, 0x03, 0x03, 0x0a,`,
 		PracStartIndex: 1,
+		HamburgExpHelper: "ExpByCbrtHelperQMinus10Div27",
+		HamburgCbrtAndWInvBody: `	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus10Div27(w)
+	var tw2 fp.Element
+	tw2.Square(&tw)
+	cbrtW.Mul(&w, &tw2)
+
+	var cw2, cw4, cw8 fp.Element
+	cw2.Square(&cbrtW)
+	cw4.Square(&cw2)
+	cw8.Square(&cw4)
+	var tw4, tw8 fp.Element
+	tw4.Square(&tw2)
+	tw8.Square(&tw4)
+	wInv.Mul(&tw8, &tw2)
+	wInv.Mul(&wInv, &tw) // tw^11
+	wInv.Mul(&wInv, &cw8)`,
 	}
 }

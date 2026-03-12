@@ -74,17 +74,9 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 	return z.cbrtVerifyAndAdjust(x, &y)
 }
 
-// cbrtOkeyaSakurai implements Ben Smith's Okeya-Sakurai-style recovery.
-//
-// Given x = (x0, x1) with norm n = x0²+x1², trace t = 2x0, and
-// y = x/conj(x) (torus element), it computes y^e via:
-//
-//	W := T_{e+1} - y⁻¹·T_e  =  s·y^e
-//	y^e = W · s / Delta       (since 1/s = s/Delta with Delta = s²)
-//
-// The key insight: Delta = (t/n)²·(t²-4n) and U = n·t²·(t²-4n) are
-// known before the ladder, so Inverse(U) is a PRE-ladder inversion
-// (unlike cbrtTorus where the inversion is post-ladder).
+// cbrtOkeyaSakurai implements Okeya-Sakurai-style recovery with Hamburg's trick
+// (Scott §2): a single exponentiation of w = U³·n yields cbrt(n), 1/n, and 1/U,
+// eliminating the standalone Inverse(U) call.
 func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	if x.A1.IsZero() {
 		if z.A0.Cbrt(&x.A0) == nil {
@@ -110,8 +102,7 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	x1sq.Square(&x.A1)
 	norm.Add(&x0sq, &x1sq)
 
-	// U = n·t²·(t²-4n) = n·4x0²·(-4x1²) = -16·n·x0²·x1²
-	// All quantities known before exponentiation and ladder.
+	// U = -16·n·x0²·x1²
 	var x0x1, U fp.Element
 	x0x1.Mul(&x.A0, &x.A1)
 	U.Square(&x0x1)
@@ -120,52 +111,116 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	U.Double(&U)
 	U.Double(&U)
 	U.Double(&U)
-	U.Neg(&U) // U = -16·n·x0²·x1²
+	U.Neg(&U)
 
-	// Pre-ladder inversion (not blocked on any ladder output)
-	var UInv fp.Element
-	UInv.Inverse(&U)
+	// Hamburg trick: single exponentiation of w = U³·n
+	var U2, U3, w fp.Element
+	U2.Square(&U)
+	U3.Mul(&U2, &U)
+	w.Mul(&U3, &norm)
 
-	// Exponentiation of norm → m = cbrt(norm), normInv
-	m, normInv, ok := cbrtAndNormInverse(&norm)
-	if !ok {
-		return nil
+	var cbrtW, wInv fp.Element
+	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus10Div27(w)
+	var tw2 fp.Element
+	tw2.Square(&tw)
+	cbrtW.Mul(&w, &tw2)
+
+	var cw2, cw4, cw8 fp.Element
+	cw2.Square(&cbrtW)
+	cw4.Square(&cw2)
+	cw8.Square(&cw4)
+	var tw4, tw8 fp.Element
+	tw4.Square(&tw2)
+	tw8.Square(&tw4)
+	wInv.Mul(&tw8, &tw2)
+	wInv.Mul(&wInv, &tw) // tw^11
+	wInv.Mul(&wInv, &cw8)
+
+	// Recover 1/U, cbrt(n), 1/n
+	var UInv, normInv fp.Element
+	UInv.Mul(&U2, &norm)
+	UInv.Mul(&UInv, &wInv)
+	var m fp.Element
+	m.Mul(&cbrtW, &UInv)
+	normInv.Mul(&U3, &wInv)
+
+	// Verify m³ = norm, adjust by ζ if needed
+	var m2 fp.Element
+	m2.Square(&m)
+	var c fp.Element
+	c.Mul(&m2, &m)
+	if !c.Equal(&norm) {
+		var zeta = fp.Element{
+		13616190144799058984,
+		9227582506135211912,
+		4426607408274926740,
+		7455198167498346307,
+		10794825842164118204,
+		335101026345095675,
+	}
+		var zeta2 = fp.Element{
+		3828863564860874189,
+		5918733612565202776,
+		16843310164143221096,
+		16127847466718491017,
+		17435063908385505950,
+		407112797415018074,
+	}
+		var omega = fp.Element{
+		14772873186050699377,
+		6749526151121446354,
+		6372666795664677781,
+		10283423008382700446,
+		286397964926079186,
+		1796971870900422465,
+	}
+		var omega2 = fp.Element{
+		3526659474838938856,
+		17562030475567847978,
+		1632777218702014455,
+		14009062335050482331,
+		3906511377122991214,
+		368068849512964448,
+	}
+
+		var cw2 fp.Element
+		cw2.Mul(&c, &omega2)
+		if cw2.Equal(&norm) {
+			m.Mul(&m, &zeta)
+		} else {
+			var cw fp.Element
+			cw.Mul(&c, &omega)
+			if cw.Equal(&norm) {
+				m.Mul(&m, &zeta2)
+			} else {
+				return nil
+			}
+		}
 	}
 
 	// DeltaInv = n³·U⁻¹
-	// (since Delta = t²(t²-4n)/n² and U = n·t²·(t²-4n), so 1/Delta = n³·U⁻¹)
 	var n2, n3, deltaInv fp.Element
 	n2.Square(&norm)
 	n3.Mul(&n2, &norm)
 	deltaInv.Mul(&n3, &UInv)
 
-	// tau = T_1 = y + y⁻¹ = 2(x0²-x1²)/n
-	// halfTau = tau/2 = (x0²-x1²)/n = Re(y)
 	var halfTau, tau fp.Element
 	halfTau.Sub(&x0sq, &x1sq)
 	halfTau.Mul(&halfTau, &normInv)
 	tau.Double(&halfTau)
 
-	// Ladder → T_e, T_{e+1}
 	Te, Te1 := lucasV2(&tau)
 
-	// Im(y) = 2·x0·x1/n
 	var imY fp.Element
 	imY.Double(&x0x1)
 	imY.Mul(&imY, &normInv)
 
-	// W = T_{e+1} - y⁻¹·T_e  where y⁻¹ = (Re(y), -Im(y))
-	// W.A0 = T_{e+1} - Re(y)·T_e
-	// W.A1 = Im(y)·T_e
 	var WA0, WA1 fp.Element
 	WA0.Mul(&halfTau, &Te)
 	WA0.Sub(&Te1, &WA0)
 	WA1.Mul(&imY, &Te)
 
-	// gamma = y^e = W·s·DeltaInv
-	// s = (0, 2·Im(y)) as Fp2, so s_im = 2·Im(y) = 4·x0·x1/n
-	// W·s = (W.A0 + W.A1·u)·(s_im·u) = (-W.A1·s_im, W.A0·s_im)
-	// gamma = (-W.A1·s_im·DeltaInv, W.A0·s_im·DeltaInv)
 	var sIm, k fp.Element
 	sIm.Double(&imY)
 	k.Mul(&sIm, &deltaInv)
@@ -175,15 +230,10 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	gamma.A0.Neg(&gamma.A0)
 	gamma.A1.Mul(&WA0, &k)
 
-	// Recover z = cbrt(x) from gamma = y^e (torus representation)
-	// gamma = z/conj(z), N(z) = m, so z² = m·gamma
-	// z = x·conj(gamma)/m  (since x = z³, gamma has norm 1)
-	// mInv = m²·normInv  (since m³ = n)
 	var mInv fp.Element
 	mInv.Square(&m)
 	mInv.Mul(&mInv, &normInv)
 
-	// x·conj(gamma) = (x0·g0 + x1·g1, x1·g0 - x0·g1)
 	var y E2
 	var t1, t2 fp.Element
 	t1.Mul(&x.A0, &gamma.A0)

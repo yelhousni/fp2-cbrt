@@ -92,8 +92,9 @@ func (z *E2) cbrtTorus(x *E2) *E2 {
 	return z.cbrtVerify(x)
 }
 
-// cbrtOkeyaSakurai implements Okeya-Sakurai-style recovery for cube root in Fp2.
-// For β = -5 (BLS12-377): norm = x0² + 5·x1², U = -80·n·x0²·x1².
+// cbrtOkeyaSakurai implements Okeya-Sakurai-style recovery with Hamburg's trick
+// (Scott §2): a single exponentiation of w = U³·n yields cbrt(n), 1/n, and 1/U,
+// eliminating the standalone Inverse(U) call.
 func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	if x.A1.IsZero() {
 		if z.A0.Cbrt(&x.A0) == nil {
@@ -138,17 +139,39 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	U.Double(&U)
 	U.Double(&U)
 	U.Double(&U)
-	U.Double(&U) // ×16
-	fp.MulBy5(&U) // ×80
-	U.Neg(&U)     // U = -80·n·x0²·x1²
+	U.Double(&U)
+	fp.MulBy5(&U)
+	U.Neg(&U)
 
-	// Pre-ladder inversion
-	var UInv fp.Element
-	UInv.Inverse(&U)
+	// Hamburg trick: single exponentiation of w = U³·n
+	var U2, U3, w fp.Element
+	U2.Square(&U)
+	U3.Mul(&U2, &U)
+	w.Mul(&U3, &norm)
 
-	m, normInv := cbrtAndNormInverse(&norm)
+	var cbrtW, wInv fp.Element
+	var tw fp.Element
+	tw.ExpByCbrtHelperQMinus7Div9(w)
+	cbrtW.Mul(&w, &tw)
 
-	// DeltaInv = n³/U
+	var cw2, cw4 fp.Element
+	cw2.Square(&cbrtW)
+	cw4.Square(&cw2)
+	var cw5 fp.Element
+	cw5.Mul(&cw4, &cbrtW)
+	var tw2, tw4 fp.Element
+	tw2.Square(&tw)
+	tw4.Square(&tw2)
+	wInv.Mul(&cw5, &tw4)
+
+	// Recover 1/U, cbrt(n), 1/n
+	var UInv, normInv, m fp.Element
+	UInv.Mul(&U2, &norm)
+	UInv.Mul(&UInv, &wInv)
+	m.Mul(&cbrtW, &UInv)
+	normInv.Mul(&U3, &wInv)
+
+	// DeltaInv = n³·U⁻¹
 	var n2, n3, deltaInv fp.Element
 	n2.Square(&norm)
 	n3.Mul(&n2, &norm)
@@ -162,22 +185,15 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 
 	Te, Te1 := lucasV2(&tau)
 
-	// Im(y) = -2·x0·x1/n (same for all β)
 	var imY fp.Element
 	imY.Double(&x0x1)
 	imY.Mul(&imY, &normInv)
 
-	// W = T_{e+1} - y⁻¹·T_e
-	// W.A0 = T_{e+1} - Re(y)·T_e
-	// W.A1 = Im(y)·T_e
 	var WA0, WA1 fp.Element
 	WA0.Mul(&halfTau, &Te)
 	WA0.Sub(&Te1, &WA0)
 	WA1.Mul(&imY, &Te)
 
-	// gamma = W·s/Delta
-	// s = (0, 2·Im(y)), W·s = (β·WA1·sIm, WA0·sIm)
-	// For β=-5: gamma.A0 = -5·WA1·k, gamma.A1 = WA0·k
 	var sIm, k fp.Element
 	sIm.Double(&imY)
 	k.Mul(&sIm, &deltaInv)
@@ -188,13 +204,11 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 	gamma.A0.Neg(&gamma.A0)
 	gamma.A1.Mul(&WA0, &k)
 
-	// mInv = m²/n (since m³ = n)
 	var mInv fp.Element
 	mInv.Square(&m)
 	mInv.Mul(&mInv, &normInv)
 
 	// z = x·conj(gamma)/m
-	// x·conj(gamma) = (x0·g0 - β·x1·(-g1), x1·g0 - x0·g1)
 	// For β=-5: (x0·g0 + 5·x1·g1, x1·g0 - x0·g1)
 	var t1, t2 fp.Element
 	t1.Mul(&x.A0, &gamma.A0)
