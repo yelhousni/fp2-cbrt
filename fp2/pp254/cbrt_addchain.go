@@ -7,16 +7,16 @@ package pp254
 // Operations: 497 squares 99 multiplies
 func (z *E2) expByE2Cbrt(x E2) *E2 {
 	var (
-		t0 E2
-		t1 E2
-		t2 E2
-		t3 E2
-		t4 E2
-		t5 E2
-		t6 E2
-		t7 E2
-		t8 E2
-		t9 E2
+		t0  E2
+		t1  E2
+		t2  E2
+		t3  E2
+		t4  E2
+		t5  E2
+		t6  E2
+		t7  E2
+		t8  E2
+		t9  E2
 		t10 E2
 		t11 E2
 		t12 E2
@@ -95,281 +95,281 @@ func (z *E2) expByE2Cbrt(x E2) *E2 {
 	t17.Mul(&t17, &t30)
 	t9.Mul(&t9, &t17)
 	t39.Mul(&t37, &t30)
-	
+
 	for s := 0; s < 8; s++ {
 		t39.Square(&t39)
 	}
 	t39.Mul(&t9, &t39)
-	
+
 	for s := 0; s < 6; s++ {
 		t39.Square(&t39)
 	}
 	t38.Mul(&t38, &t39)
-	
+
 	for s := 0; s < 10; s++ {
 		t38.Square(&t38)
 	}
 	t38.Mul(&t37, &t38)
-	
+
 	for s := 0; s < 8; s++ {
 		t38.Square(&t38)
 	}
 	t38.Mul(&t27, &t38)
-	
+
 	for s := 0; s < 9; s++ {
 		t38.Square(&t38)
 	}
 	t38.Mul(&t12, &t38)
-	
+
 	for s := 0; s < 8; s++ {
 		t38.Square(&t38)
 	}
 	t37.Mul(&t37, &t38)
-	
+
 	for s := 0; s < 5; s++ {
 		t37.Square(&t37)
 	}
 	t36.Mul(&t36, &t37)
-	
+
 	for s := 0; s < 11; s++ {
 		t36.Square(&t36)
 	}
 	t36.Mul(&t8, &t36)
-	
+
 	for s := 0; s < 7; s++ {
 		t36.Square(&t36)
 	}
 	t36.Mul(&t21, &t36)
-	
+
 	for s := 0; s < 10; s++ {
 		t36.Square(&t36)
 	}
 	t36.Mul(&t29, &t36)
-	
+
 	for s := 0; s < 6; s++ {
 		t36.Square(&t36)
 	}
 	t35.Mul(&t35, &t36)
-	
+
 	for s := 0; s < 10; s++ {
 		t35.Square(&t35)
 	}
 	t35.Mul(&t20, &t35)
-	
+
 	for s := 0; s < 11; s++ {
 		t35.Square(&t35)
 	}
 	t35.Mul(&t2, &t35)
-	
+
 	for s := 0; s < 8; s++ {
 		t35.Square(&t35)
 	}
 	t35.Mul(&t14, &t35)
-	
+
 	for s := 0; s < 9; s++ {
 		t35.Square(&t35)
 	}
 	t34.Mul(&t34, &t35)
-	
+
 	for s := 0; s < 12; s++ {
 		t34.Square(&t34)
 	}
 	t33.Mul(&t33, &t34)
-	
+
 	for s := 0; s < 14; s++ {
 		t33.Square(&t33)
 	}
 	t32.Mul(&t32, &t33)
-	
+
 	for s := 0; s < 9; s++ {
 		t32.Square(&t32)
 	}
 	t31.Mul(&t31, &t32)
-	
+
 	for s := 0; s < 10; s++ {
 		t31.Square(&t31)
 	}
 	t30.Mul(&t30, &t31)
-	
+
 	for s := 0; s < 8; s++ {
 		t30.Square(&t30)
 	}
 	t29.Mul(&t29, &t30)
-	
+
 	for s := 0; s < 9; s++ {
 		t29.Square(&t29)
 	}
 	t28.Mul(&t28, &t29)
-	
+
 	for s := 0; s < 12; s++ {
 		t28.Square(&t28)
 	}
 	t27.Mul(&t27, &t28)
-	
+
 	for s := 0; s < 13; s++ {
 		t27.Square(&t27)
 	}
 	t26.Mul(&t26, &t27)
-	
+
 	for s := 0; s < 8; s++ {
 		t26.Square(&t26)
 	}
 	t26.Mul(&t14, &t26)
-	
+
 	for s := 0; s < 8; s++ {
 		t26.Square(&t26)
 	}
 	t26.Mul(&t10, &t26)
-	
+
 	for s := 0; s < 7; s++ {
 		t26.Square(&t26)
 	}
 	t26.Mul(&t1, &t26)
-	
+
 	for s := 0; s < 6; s++ {
 		t26.Square(&t26)
 	}
 	t25.Mul(&t25, &t26)
-	
+
 	for s := 0; s < 12; s++ {
 		t25.Square(&t25)
 	}
 	t24.Mul(&t24, &t25)
-	
+
 	for s := 0; s < 8; s++ {
 		t24.Square(&t24)
 	}
 	t23.Mul(&t23, &t24)
-	
+
 	for s := 0; s < 10; s++ {
 		t23.Square(&t23)
 	}
 	t22.Mul(&t22, &t23)
-	
+
 	for s := 0; s < 6; s++ {
 		t22.Square(&t22)
 	}
 	t21.Mul(&t21, &t22)
-	
+
 	for s := 0; s < 11; s++ {
 		t21.Square(&t21)
 	}
 	t20.Mul(&t20, &t21)
-	
+
 	for s := 0; s < 8; s++ {
 		t20.Square(&t20)
 	}
 	t19.Mul(&t19, &t20)
-	
+
 	for s := 0; s < 10; s++ {
 		t19.Square(&t19)
 	}
 	t18.Mul(&t18, &t19)
-	
+
 	for s := 0; s < 9; s++ {
 		t18.Square(&t18)
 	}
 	t17.Mul(&t17, &t18)
-	
+
 	for s := 0; s < 12; s++ {
 		t17.Square(&t17)
 	}
 	t16.Mul(&t16, &t17)
-	
+
 	for s := 0; s < 9; s++ {
 		t16.Square(&t16)
 	}
 	t15.Mul(&t15, &t16)
-	
+
 	for s := 0; s < 11; s++ {
 		t15.Square(&t15)
 	}
 	t14.Mul(&t14, &t15)
-	
+
 	for s := 0; s < 7; s++ {
 		t14.Square(&t14)
 	}
 	t14.Mul(&t1, &t14)
-	
+
 	for s := 0; s < 10; s++ {
 		t14.Square(&t14)
 	}
 	t13.Mul(&t13, &t14)
-	
+
 	for s := 0; s < 8; s++ {
 		t13.Square(&t13)
 	}
 	t13.Mul(&t0, &t13)
-	
+
 	for s := 0; s < 9; s++ {
 		t13.Square(&t13)
 	}
 	t12.Mul(&t12, &t13)
-	
+
 	for s := 0; s < 6; s++ {
 		t12.Square(&t12)
 	}
 	t11.Mul(&t11, &t12)
-	
+
 	for s := 0; s < 11; s++ {
 		t11.Square(&t11)
 	}
 	t10.Mul(&t10, &t11)
-	
+
 	for s := 0; s < 8; s++ {
 		t10.Square(&t10)
 	}
 	t9.Mul(&t9, &t10)
-	
+
 	for s := 0; s < 8; s++ {
 		t9.Square(&t9)
 	}
 	t8.Mul(&t8, &t9)
-	
+
 	for s := 0; s < 8; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 7; s++ {
 		t7.Square(&t7)
 	}
 	t6.Mul(&t6, &t7)
-	
+
 	for s := 0; s < 5; s++ {
 		t6.Square(&t6)
 	}
 	t5.Mul(&t5, &t6)
-	
+
 	for s := 0; s < 12; s++ {
 		t5.Square(&t5)
 	}
 	t4.Mul(&t4, &t5)
-	
+
 	for s := 0; s < 8; s++ {
 		t4.Square(&t4)
 	}
 	t3.Mul(&t3, &t4)
-	
+
 	for s := 0; s < 14; s++ {
 		t3.Square(&t3)
 	}
 	t2.Mul(&t2, &t3)
-	
+
 	for s := 0; s < 7; s++ {
 		t2.Square(&t2)
 	}
 	t1.Mul(&t1, &t2)
-	
+
 	for s := 0; s < 13; s++ {
 		t1.Square(&t1)
 	}
 	t0.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 6; s++ {
 		t0.Square(&t0)
 	}
 	z.Mul(z, &t0)
-	
+
 	return z
 }

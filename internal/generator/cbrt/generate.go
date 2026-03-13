@@ -31,11 +31,11 @@ var tmplFS embed.FS
 
 // CbrtConfig holds all per-field parameters for code generation.
 type CbrtConfig struct {
-	Package   string
-	FpImport  string
-	NbLimbs   int
-	Beta      int // -1 or -5
-	PMod9     int // 1, 4, or 7
+	Package  string
+	FpImport string
+	NbLimbs  int
+	Beta     int // -1 or -5
+	PMod9    int // 1, 4, or 7
 
 	// Lucas sequence
 	LucasExponent  string // e.g. "[6]uint64{...}"
@@ -72,12 +72,12 @@ type CbrtConfig struct {
 	HamburgCbrtAndWInvBody string // raw Go: given tw, w → compute cbrtW, wInv
 
 	// PRAC
-	PracBitComment   string // e.g. "380 bits"
-	PracOpsLen       int
-	PracOpsData      string // raw byte array contents (0x03, 0x83, ...)
+	PracBitComment     string // e.g. "380 bits"
+	PracOpsLen         int
+	PracOpsData        string // raw byte array contents (0x03, 0x83, ...)
 	HasSpecialPracInit bool   // pp377 only
-	PracInitCode     string // raw Go for pp377's specialized init
-	PracStartIndex   int    // 1 or 7
+	PracInitCode       string // raw Go for pp377's specialized init
+	PracStartIndex     int    // 1 or 7
 }
 
 var configs = []CbrtConfig{
@@ -254,11 +254,11 @@ func generateFile(t *template.Template, name, path string, cfg CbrtConfig) error
 
 func configIP381() CbrtConfig {
 	return CbrtConfig{
-		Package:  "ip381",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/ip381",
-		NbLimbs:  6,
-		Beta:     -1,
-		PMod9:    4,
+		Package:        "ip381",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/ip381",
+		NbLimbs:        6,
+		Beta:           -1,
+		PMod9:          4,
 		E2CbrtExponent: "52e2c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c10aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[6]uint64{
 	12297829382473034411,
@@ -337,7 +337,7 @@ func configIP381() CbrtConfig {
 	0x04, 0x03, 0x83, 0x85, 0x03, 0x03, 0x84, 0x05, 0x05, 0x03, 0x03, 0x83, 0x03, 0x83, 0x83, 0x03, 0x03, 0x81, 0x01, 0x03,
 	0x83, 0x83, 0x86, 0x01, 0x03, 0x83, 0x03, 0x03, 0x87, 0x07, 0x06, 0x06, 0x03, 0x03, 0x03, 0x83, 0x83, 0x83, 0x01, 0x03,
 	0x0a,`,
-		PracStartIndex: 1,
+		PracStartIndex:   1,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus4Div9(w)
@@ -356,11 +356,11 @@ func configIP381() CbrtConfig {
 
 func configIP575() CbrtConfig {
 	return CbrtConfig{
-		Package:  "ip575",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/ip575",
-		NbLimbs:  9,
-		Beta:     -1,
-		PMod9:    4,
+		Package:        "ip575",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/ip575",
+		NbLimbs:        9,
+		Beta:           -1,
+		PMod9:          4,
 		E2CbrtExponent: "218b1c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71b7aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[9]uint64{
 	12297829382473034411,
@@ -457,7 +457,7 @@ func configIP575() CbrtConfig {
 	0x04, 0x05, 0x03, 0x03, 0x83, 0x01, 0x03, 0x83, 0x03, 0x81, 0x03, 0x83, 0x85, 0x04, 0x04, 0x03, 0x03, 0x03, 0x86, 0x03,
 	0x03, 0x83, 0x03, 0x83, 0x83, 0x03, 0x83, 0x83, 0x83, 0x03, 0x83, 0x03, 0x83, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x83,
 	0x03, 0x0a,`,
-		PracStartIndex: 1,
+		PracStartIndex:   1,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus4Div9(w)
@@ -476,11 +476,11 @@ func configIP575() CbrtConfig {
 
 func configIP765() CbrtConfig {
 	return CbrtConfig{
-		Package:  "ip765",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/ip765",
-		NbLimbs:  12,
-		Beta:     -1,
-		PMod9:    4,
+		Package:        "ip765",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/ip765",
+		NbLimbs:        12,
+		Beta:           -1,
+		PMod9:          4,
 		E2CbrtExponent: "1caac71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c71c38aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
 		LucasExponent: `[12]uint64{
 	12297829382473034411,
@@ -597,7 +597,7 @@ func configIP765() CbrtConfig {
 	0x83, 0x83, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x83, 0x83, 0x84, 0x04, 0x03, 0x03, 0x83, 0x03, 0x83, 0x03, 0x83, 0x03,
 	0x83, 0x83, 0x03, 0x03, 0x81, 0x03, 0x83, 0x03, 0x03, 0x83, 0x83, 0x84, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x03, 0x87,
 	0x83, 0x83, 0x03, 0x03, 0x86, 0x03, 0x03, 0x83, 0x83, 0x03, 0x84, 0x05, 0x03, 0x03, 0x03, 0x0a,`,
-		PracStartIndex: 1,
+		PracStartIndex:   1,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus4Div9",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus4Div9(w)
@@ -616,11 +616,11 @@ func configIP765() CbrtConfig {
 
 func configPP254() CbrtConfig {
 	return CbrtConfig{
-		Package:  "pp254",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/pp254",
-		NbLimbs:  4,
-		Beta:     -1,
-		PMod9:    1,
+		Package:        "pp254",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/pp254",
+		NbLimbs:        4,
+		Beta:           -1,
+		PMod9:          1,
 		E2CbrtExponent: "ad76de41a5af60ea315d97688a2286dda209e0149bcd7bb708258216df4faba1830243f61450cc77484dacc5bf5165ad7b68d3edc5898e503f230287a81acb",
 		LucasExponent: `[4]uint64{
 	7593120314996402627,
@@ -743,7 +743,7 @@ func configPP254() CbrtConfig {
 	0x03, 0x83, 0x03, 0x84, 0x05, 0x04, 0x03, 0x03, 0x03, 0x83, 0x83, 0x83, 0x03, 0x01, 0x03, 0x83, 0x03, 0x83, 0x83, 0x03,
 	0x03, 0x83, 0x86, 0x06, 0x03, 0x03, 0x83, 0x84, 0x04, 0x04, 0x03, 0x03, 0x83, 0x01, 0x03, 0x83, 0x83, 0x03, 0x03, 0x85,
 	0x05, 0x03, 0x03, 0x0a,`,
-		PracStartIndex: 1,
+		PracStartIndex:   1,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus19Div27",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus19Div27(w)
@@ -767,11 +767,11 @@ func configPP254() CbrtConfig {
 
 func configPP377() CbrtConfig {
 	return CbrtConfig{
-		Package:  "pp377",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/pp377",
-		NbLimbs:  6,
-		Beta:     -5,
-		PMod9:    7,
+		Package:        "pp377",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/pp377",
+		NbLimbs:        6,
+		Beta:           -5,
+		PMod9:          7,
 		E2CbrtExponent: "a0ac6746271b5cf6caf0d2875dd4829ad3aa2498a59c3fdc192af14cf4bf1ea0057c62016ad86392de0411d082fb9dc97b4257efc987277279f04c87e65bdf10e2a07dc3f1e965f796ca7c063000199ad968355555559075aaaaaaaaaaab",
 		LucasExponent: `[6]uint64{
 	3195374304363544577,
@@ -861,7 +861,7 @@ func configPP377() CbrtConfig {
 	0x83, 0x83, 0x03, 0x85, 0x03, 0x03, 0x83, 0x87, 0x03, 0x03, 0x03, 0x81, 0x03, 0x83, 0x83, 0x83, 0x85, 0x03, 0x03, 0x83,
 	0x83, 0x03, 0x03, 0x83, 0x83, 0x03, 0x03, 0x83, 0x83, 0x83, 0x85, 0x04, 0x03, 0x03, 0x01, 0x03, 0x81, 0x03, 0x83, 0x83,
 	0x03, 0x85, 0x03, 0x03, 0x87, 0x07, 0x03, 0x03, 0x83, 0x03, 0x86, 0x81, 0x03, 0x83, 0x83, 0x83, 0x83, 0x0a,`,
-		PracStartIndex: 7,
+		PracStartIndex:   7,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus7Div9",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus7Div9(w)
@@ -881,11 +881,11 @@ func configPP377() CbrtConfig {
 
 func configPP381() CbrtConfig {
 	return CbrtConfig{
-		Package:  "pp381",
-		FpImport: "github.com/yelhousni/fp2-cbrt/fp/pp381",
-		NbLimbs:  6,
-		Beta:     -1,
-		PMod9:    1,
+		Package:        "pp381",
+		FpImport:       "github.com/yelhousni/fp2-cbrt/fp/pp381",
+		NbLimbs:        6,
+		Beta:           -1,
+		PMod9:          1,
 		E2CbrtExponent: "190b8ad76f8849c0701770fc867ca9d8feb0087bcb44fd3337e96b01f2e8bbdd0fa2d9f75d8c3cff998773ab047aa139fa626e17edf07656dbcc0fb8513ed34fa847c66a9bea57d169eef1e7300bbd895e206963317cfcdb818e38e49be8d3",
 		LucasExponent: `[6]uint64{
 	10616391696595805071,
@@ -1029,7 +1029,7 @@ func configPP381() CbrtConfig {
 	0x03, 0x03, 0x83, 0x84, 0x04, 0x03, 0x81, 0x03, 0x83, 0x03, 0x83, 0x83, 0x03, 0x01, 0x03, 0x83, 0x83, 0x02, 0x89, 0x04,
 	0x05, 0x04, 0x03, 0x03, 0x03, 0x83, 0x81, 0x03, 0x83, 0x01, 0x03, 0x83, 0x85, 0x05, 0x04, 0x04, 0x05, 0x05, 0x05, 0x04,
 	0x03, 0x03, 0x83, 0x85, 0x04, 0x03, 0x03, 0x83, 0x83, 0x85, 0x03, 0x03, 0x0a,`,
-		PracStartIndex: 1,
+		PracStartIndex:   1,
 		HamburgExpHelper: "ExpByCbrtHelperQMinus10Div27",
 		HamburgCbrtAndWInvBody: `	var tw fp.Element
 	tw.ExpByCbrtHelperQMinus10Div27(w)

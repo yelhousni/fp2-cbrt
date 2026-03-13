@@ -55,37 +55,37 @@ func (z *E2) expByE2Cbrt(x E2) *E2 {
 	t7.Mul(&t7, &t8)
 	t8.Square(&t8)
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 13; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
 	t7.Mul(&t7, &t8)
-	
+
 	for s := 0; s < 12; s++ {
 		t8.Square(&t8)
 	}
@@ -101,7 +101,7 @@ func (z *E2) expByE2Cbrt(x E2) *E2 {
 	t4.Mul(&x, &t4)
 	z.Mul(z, &t4)
 	t7.Mul(&t7, z)
-	
+
 	for s := 0; s < 3; s++ {
 		t7.Square(&t7)
 	}
@@ -116,14 +116,14 @@ func (z *E2) expByE2Cbrt(x E2) *E2 {
 	t6.Mul(&x, &t6)
 	t4.Mul(&t4, &t6)
 	t6.Mul(&t6, &t4)
-	
+
 	for s := 0; s < 7; s++ {
 		t6.Square(&t6)
 	}
 	t5.Mul(&t5, &t6)
 	t4.Mul(&t4, &t5)
 	t5.Mul(&t5, &t4)
-	
+
 	for s := 0; s < 2; s++ {
 		t5.Square(&t5)
 	}
@@ -139,61 +139,61 @@ func (z *E2) expByE2Cbrt(x E2) *E2 {
 	t1.Mul(&t1, &t2)
 	t2.Mul(&t2, &t1)
 	t4.Mul(&t4, &t2)
-	
+
 	for s := 0; s < 127; s++ {
 		t4.Square(&t4)
 	}
 	t4.Mul(&t3, &t4)
-	
+
 	for s := 0; s < 131; s++ {
 		t4.Square(&t4)
 	}
 	t4.Mul(&t2, &t4)
-	
+
 	for s := 0; s < 127; s++ {
 		t4.Square(&t4)
 	}
 	t3.Mul(&t3, &t4)
-	
+
 	for s := 0; s < 131; s++ {
 		t3.Square(&t3)
 	}
 	t2.Mul(&t2, &t3)
-	
+
 	for s := 0; s < 128; s++ {
 		t2.Square(&t2)
 	}
 	t1.Mul(&t1, &t2)
-	
+
 	for s := 0; s < 128; s++ {
 		t1.Square(&t1)
 	}
 	t1.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 128; s++ {
 		t1.Square(&t1)
 	}
 	t1.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 128; s++ {
 		t1.Square(&t1)
 	}
 	t1.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 128; s++ {
 		t1.Square(&t1)
 	}
 	t1.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 128; s++ {
 		t1.Square(&t1)
 	}
 	t0.Mul(&t0, &t1)
-	
+
 	for s := 0; s < 113; s++ {
 		t0.Square(&t0)
 	}
 	z.Mul(z, &t0)
-	
+
 	return z
 }

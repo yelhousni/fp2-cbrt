@@ -159,7 +159,6 @@ func BenchmarkCbrtFrobenius(b *testing.B) {
 	}
 }
 
-
 func TestCbrtTorusPracVsTorus(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		var a, x E2
@@ -225,7 +224,6 @@ func BenchmarkCbrtFrobenius1bit(b *testing.B) {
 		a.cbrtFrobenius1bit(&x)
 	}
 }
-
 
 func TestCbrtTorusOkeyaSakuraiVsTorus(t *testing.T) {
 	for i := 0; i < 50; i++ {

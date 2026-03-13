@@ -13,11 +13,11 @@ type E2 struct {
 	A0, A1 fp.Element
 }
 
-func (z *E2) SetZero() *E2   { z.A0.SetZero(); z.A1.SetZero(); return z }
-func (z *E2) SetOne() *E2    { z.A0.SetOne(); z.A1.SetZero(); return z }
-func (z *E2) Set(x *E2) *E2  { z.A0.Set(&x.A0); z.A1.Set(&x.A1); return z }
+func (z *E2) SetZero() *E2     { z.A0.SetZero(); z.A1.SetZero(); return z }
+func (z *E2) SetOne() *E2      { z.A0.SetOne(); z.A1.SetZero(); return z }
+func (z *E2) Set(x *E2) *E2    { z.A0.Set(&x.A0); z.A1.Set(&x.A1); return z }
 func (z *E2) Equal(x *E2) bool { return z.A0.Equal(&x.A0) && z.A1.Equal(&x.A1) }
-func (z *E2) IsZero() bool   { return z.A0.IsZero() && z.A1.IsZero() }
+func (z *E2) IsZero() bool     { return z.A0.IsZero() && z.A1.IsZero() }
 
 func (z *E2) SetRandom() (*E2, error) {
 	if _, err := z.A0.SetRandom(); err != nil {

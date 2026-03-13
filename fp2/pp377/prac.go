@@ -53,15 +53,15 @@ func lucasVPrac(alpha *fp.Element) fp.Element {
 	// Op 4 (case 3):  T = V₉²-2.                   → A=V₉, B=V₉²-2, C=V₉.
 	// Op 5 (case 10): A=A·B-C. B=A, C=2.           → A=B=V₂₇, C=2.
 	// Op 6 (case 3):  T = V₂₇²-2.                  → A=V₂₇, B=V₂₇²-2, C=V₂₇.
-	reg[0].Square(alpha).Sub(&reg[0], &two)          // V₂ = α²-2
-	reg[0].Mul(&reg[0], alpha).Sub(&reg[0], alpha)   // V₃ = α·V₂ - α
-	reg[1].Square(&reg[0]).Sub(&reg[1], &two)        // V₃²-2
+	reg[0].Square(alpha).Sub(&reg[0], &two)            // V₂ = α²-2
+	reg[0].Mul(&reg[0], alpha).Sub(&reg[0], alpha)     // V₃ = α·V₂ - α
+	reg[1].Square(&reg[0]).Sub(&reg[1], &two)          // V₃²-2
 	reg[3].Mul(&reg[0], &reg[1]).Sub(&reg[3], &reg[0]) // V₉ = V₃·(V₃²-2) - V₃
-	reg[1].Square(&reg[3]).Sub(&reg[1], &two)        // V₉²-2
+	reg[1].Square(&reg[3]).Sub(&reg[1], &two)          // V₉²-2
 	reg[4].Mul(&reg[3], &reg[1]).Sub(&reg[4], &reg[3]) // V₂₇ = V₉·(V₉²-2) - V₉
-	reg[1].Square(&reg[4]).Sub(&reg[1], &two)        // V₂₇²-2
-	reg[0].Set(&reg[4])                              // A = V₂₇
-	reg[2].Set(&reg[4])                              // C = V₂₇
+	reg[1].Square(&reg[4]).Sub(&reg[1], &two)          // V₂₇²-2
+	reg[0].Set(&reg[4])                                // A = V₂₇
+	reg[2].Set(&reg[4])                                // C = V₂₇
 
 	pA, pB, pC, pT := &reg[0], &reg[1], &reg[2], &reg[3]
 
