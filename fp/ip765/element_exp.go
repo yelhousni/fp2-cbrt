@@ -5,6 +5,15 @@ import "math/big"
 // cbrtHelperQMinus4Div9 is (q-4)/9 as a big.Int, precomputed.
 var cbrtHelperQMinus4Div9 *big.Int
 
+// nSquare sets z to x^(2^n) by repeated squaring, returning z.
+func (z *Element) nSquare(x *Element, n int) *Element {
+	z.Square(x)
+	for i := 1; i < n; i++ {
+		z.Square(z)
+	}
+	return z
+}
+
 func init() {
 	cbrtHelperQMinus4Div9, _ = new(big.Int).SetString("10823490389574712357131286038814647262939987695285129911641069167011043154307694764188252795924537348992929329133102371256133248462931513091394906404231324673815780404659245489540423676413867196183067241557756414631604319700269283", 10)
 }

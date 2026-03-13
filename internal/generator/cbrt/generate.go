@@ -10,8 +10,10 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"fmt"
+	"go/format"
 	"log"
 	"math/big"
 	"os"
@@ -242,12 +244,15 @@ func countOps(p *ir.Program) (squares, muls int) {
 }
 
 func generateFile(t *template.Template, name, path string, cfg CbrtConfig) error {
-	f, err := os.Create(path)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, name, cfg); err != nil {
 		return err
 	}
-	defer f.Close()
-	return t.ExecuteTemplate(f, name, cfg)
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("gofmt %s: %w", path, err)
+	}
+	return os.WriteFile(path, formatted, 0644)
 }
 
 // --- Per-field configs ---

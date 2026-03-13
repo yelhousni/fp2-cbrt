@@ -166,26 +166,6 @@ func (z *Element) SetInterface(i1 interface{}) (*Element, error) {
 			return nil, errors.New("can't set ip765.Element with <nil>")
 		}
 		return z.Set(c1), nil
-	case uint8:
-		return z.SetUint64(uint64(c1)), nil
-	case uint16:
-		return z.SetUint64(uint64(c1)), nil
-	case uint32:
-		return z.SetUint64(uint64(c1)), nil
-	case uint:
-		return z.SetUint64(uint64(c1)), nil
-	case uint64:
-		return z.SetUint64(c1), nil
-	case int8:
-		return z.SetInt64(int64(c1)), nil
-	case int16:
-		return z.SetInt64(int64(c1)), nil
-	case int32:
-		return z.SetInt64(int64(c1)), nil
-	case int64:
-		return z.SetInt64(c1), nil
-	case int:
-		return z.SetInt64(int64(c1)), nil
 	case string:
 		return z.SetString(c1)
 	case *big.Int:
@@ -197,6 +177,18 @@ func (z *Element) SetInterface(i1 interface{}) (*Element, error) {
 		return z.SetBigInt(&c1), nil
 	case []byte:
 		return z.SetBytes(c1), nil
+	default:
+		return z.setInterfaceReflect(i1)
+	}
+}
+
+func (z *Element) setInterfaceReflect(i1 interface{}) (*Element, error) {
+	v := reflect.ValueOf(i1)
+	switch v.Kind() {
+	case reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uint:
+		return z.SetUint64(v.Uint()), nil
+	case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int:
+		return z.SetInt64(v.Int()), nil
 	default:
 		return nil, errors.New("can't set ip765.Element from type " + reflect.TypeOf(i1).String())
 	}
@@ -291,65 +283,12 @@ func (z *Element) FitsOnOneWord() bool {
 func (z *Element) Cmp(x *Element) int {
 	_z := z.Bits()
 	_x := x.Bits()
-	if _z[11] > _x[11] {
-		return 1
-	} else if _z[11] < _x[11] {
-		return -1
-	}
-	if _z[10] > _x[10] {
-		return 1
-	} else if _z[10] < _x[10] {
-		return -1
-	}
-	if _z[9] > _x[9] {
-		return 1
-	} else if _z[9] < _x[9] {
-		return -1
-	}
-	if _z[8] > _x[8] {
-		return 1
-	} else if _z[8] < _x[8] {
-		return -1
-	}
-	if _z[7] > _x[7] {
-		return 1
-	} else if _z[7] < _x[7] {
-		return -1
-	}
-	if _z[6] > _x[6] {
-		return 1
-	} else if _z[6] < _x[6] {
-		return -1
-	}
-	if _z[5] > _x[5] {
-		return 1
-	} else if _z[5] < _x[5] {
-		return -1
-	}
-	if _z[4] > _x[4] {
-		return 1
-	} else if _z[4] < _x[4] {
-		return -1
-	}
-	if _z[3] > _x[3] {
-		return 1
-	} else if _z[3] < _x[3] {
-		return -1
-	}
-	if _z[2] > _x[2] {
-		return 1
-	} else if _z[2] < _x[2] {
-		return -1
-	}
-	if _z[1] > _x[1] {
-		return 1
-	} else if _z[1] < _x[1] {
-		return -1
-	}
-	if _z[0] > _x[0] {
-		return 1
-	} else if _z[0] < _x[0] {
-		return -1
+	for i := len(_z) - 1; i >= 0; i-- {
+		if _z[i] > _x[i] {
+			return 1
+		} else if _z[i] < _x[i] {
+			return -1
+		}
 	}
 	return 0
 }
@@ -448,7 +387,15 @@ func (z *Element) MustSetRandom() *Element {
 // smallerThanModulus returns true if z < q
 // This is not constant time
 func (z *Element) smallerThanModulus() bool {
-	return (z[11] < q11 || (z[11] == q11 && (z[10] < q10 || (z[10] == q10 && (z[9] < q9 || (z[9] == q9 && (z[8] < q8 || (z[8] == q8 && (z[7] < q7 || (z[7] == q7 && (z[6] < q6 || (z[6] == q6 && (z[5] < q5 || (z[5] == q5 && (z[4] < q4 || (z[4] == q4 && (z[3] < q3 || (z[3] == q3 && (z[2] < q2 || (z[2] == q2 && (z[1] < q1 || (z[1] == q1 && (z[0] < q0)))))))))))))))))))))))
+	for i := len(z) - 1; i >= 0; i-- {
+		if z[i] < qElement[i] {
+			return true
+		}
+		if z[i] > qElement[i] {
+			return false
+		}
+	}
+	return false
 }
 
 // One returns 1
@@ -2007,57 +1954,8 @@ func (z *Element) Legendre() int {
 		c0, c1 = updateFactorIdentityMatrixRow0, updateFactorIdentityMatrixRow1
 
 		const nbIterations = k - 2
-		// running fewer iterations because we need access to 3 low bits from b, rather than 1 in the inversion algorithm
 		for range nbIterations {
-
-			if aApprox&1 == 0 {
-				aApprox /= 2
-
-				// update the Kronecker symbol
-				//
-				// (a/2 | b) (2|b) = (a|b)
-				//
-				// b is either odd or zero, the latter case implying a non-trivial GCD and an ultimate result of 0,
-				// regardless of what value l holds.
-				// So in updating l, we may assume that b is odd.
-				// Since a is even, we only need to correctly compute l if b is odd.
-				// if b is also even, the non-trivial GCD will result in the function returning 0 anyway.
-				// so we may here assume b is odd.
-				// (2|b) = 1 if b ≡ 1 or 7 (mod 8), and -1 if b ≡ 3 or 5 (mod 8)
-				if bMod8 := bApprox & 7; bMod8 == 3 || bMod8 == 5 {
-					l = -l
-				}
-
-			} else {
-				s, borrow := bits.Sub64(aApprox, bApprox, 0)
-				if borrow == 1 {
-					// Compute (b-a|a)
-					// (x-y|z) = (x|z) unless z < 0 and sign(x-y) ≠ sign(x)
-					// Pornin20 asserts that at least one of a and b is non-negative.
-					// If a is non-negative, we immediately get (b-a|a) = (b|a)
-					// If a is negative, b-a > b. But b is already non-negative, so the b-a and b have the same sign.
-					// Thus in that case also (b-a|a) = (b|a)
-					// Since not both a and b are negative, we get a quadratic reciprocity law
-					// like that of the Legendre symbol: (b|a) = (a|b), unless a, b ≡ 3 (mod 4), in which case (b|a) = -(a|b)
-					if bApprox&3 == 3 && aApprox&3 == 3 {
-						l = -l
-					}
-
-					s = bApprox - aApprox
-					bApprox = aApprox
-					c0, c1 = c1, c0
-				}
-
-				aApprox = s / 2
-				c0 = c0 - c1
-
-				// update l to reflect halving a, just like in the case where a is even
-				if bMod8 := bApprox & 7; bMod8 == 3 || bMod8 == 5 {
-					l = -l
-				}
-			}
-
-			c1 *= 2
+			aApprox, bApprox, c0, c1, l = legendreStep(aApprox, bApprox, c0, c1, l)
 		}
 
 		s = a
@@ -2120,6 +2018,32 @@ func (z *Element) Legendre() int {
 	} else {
 		return 0 // if b ≠ 1, then (z,q) ≠ 0 ⇒ (z|q) = 0
 	}
+}
+
+func legendreStep(aApprox, bApprox uint64, c0, c1 int64, l int) (uint64, uint64, int64, int64, int) {
+	if aApprox&1 == 0 {
+		aApprox /= 2
+		if bMod8 := bApprox & 7; bMod8 == 3 || bMod8 == 5 {
+			l = -l
+		}
+	} else {
+		s, borrow := bits.Sub64(aApprox, bApprox, 0)
+		if borrow == 1 {
+			if bApprox&3 == 3 && aApprox&3 == 3 {
+				l = -l
+			}
+			s = bApprox - aApprox
+			bApprox = aApprox
+			c0, c1 = c1, c0
+		}
+		aApprox = s / 2
+		c0 = c0 - c1
+		if bMod8 := bApprox & 7; bMod8 == 3 || bMod8 == 5 {
+			l = -l
+		}
+	}
+	c1 *= 2
+	return aApprox, bApprox, c0, c1, l
 }
 
 // approximate a big number x into a single 64 bit word using its uppermost and lowermost bits.
