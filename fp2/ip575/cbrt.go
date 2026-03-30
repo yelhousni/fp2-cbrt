@@ -18,7 +18,16 @@ var lucasExponent = [9]uint64{
 	1669334261878663850,
 }
 
+// Cbrt sets z to the cube root of x and returns z.
+// Uses the Okeya–Sakurai method (fastest).
+// Returns nil if x is not a cubic residue.
 func (z *E2) Cbrt(x *E2) *E2 {
+	return z.cbrtOkeyaSakurai(x)
+}
+
+// cbrtTorus sets z to the cube root of x using the algebraic torus method and returns z.
+// Returns nil if x is not a cubic residue.
+func (z *E2) cbrtTorus(x *E2) *E2 {
 	return z.cbrtTorus(x)
 }
 

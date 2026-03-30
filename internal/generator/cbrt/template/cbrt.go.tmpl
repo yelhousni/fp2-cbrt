@@ -11,18 +11,27 @@ import (
 // lucasExponent is e = 3⁻¹ mod (p+1) as little-endian uint64 limbs.
 var lucasExponent = {{.LucasExponent}}
 
+// Cbrt sets z to the cube root of x and returns z.
+// Uses the Okeya–Sakurai method (fastest).
+// Returns nil if x is not a cubic residue.
+func (z *E2) Cbrt(x *E2) *E2 {
+	return z.cbrtOkeyaSakurai(x)
+}
+
 {{- if eq .PMod9 7}}
 
-// Cbrt sets z to the cube root of x and returns z.
+// cbrtTorus sets z to the cube root of x using the algebraic torus method and returns z.
 // Returns nil if x is not a cubic residue.
 // For BLS12-377, p mod 9 = 7, so the Fp cube root formula returns j = 0
 // deterministically and no adjustment is needed.
-func (z *E2) Cbrt(x *E2) *E2 {
+func (z *E2) cbrtTorus(x *E2) *E2 {
 	return z.cbrtTorus(x)
 }
 {{- else}}
 
-func (z *E2) Cbrt(x *E2) *E2 {
+// cbrtTorus sets z to the cube root of x using the algebraic torus method and returns z.
+// Returns nil if x is not a cubic residue.
+func (z *E2) cbrtTorus(x *E2) *E2 {
 	return z.cbrtTorus(x)
 }
 {{- end}}

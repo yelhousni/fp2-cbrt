@@ -289,8 +289,7 @@ func configIP381() CbrtConfig {
 	normInv.Mul(&t4, &t) // t⁵
 	normInv.Mul(&normInv, &m2)
 
-	// For p mod 9 = 4: Fp cbrt is unique (2p+1 ≡ 0 mod 9)
-	// Verify m³ = norm
+	// For p mod 9 = 4: j = 0 always (v₃(p-1) = 1). Verify m³ = norm.
 	var c fp.Element
 	c.Mul(&m2, &m)
 	if !c.Equal(norm) {
