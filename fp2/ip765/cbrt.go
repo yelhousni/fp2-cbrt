@@ -245,35 +245,15 @@ func (z *E2) cbrtVerifyAndAdjust(x *E2, y *E2) *E2 {
 		739180031448353113,
 	}
 
-	// For non-unique cube root: check y³·ω² = x, then z = y·ω
-	// (since ω³ = 1, (y·ω)³ = y³·ω³ = y³, need y³·ω^(-1) = x, i.e. y³ = x·ω)
-	// Actually: if y³ = x·ω then (y·ω)³ = y³·ω³ = x·ω·1 ≠ x
-	// Correct: if c = y³ ≠ x, check c·ω² = x (then y·ω is a cube root since
-	// (y·ω)³ = y³·ω³ = y³ = c, and c·ω² = x means c = x·ω, so
-	// we need to find z s.t. z³=x. Since c=y³=x·ω, we need z=y·ζ where ζ³=ω⁻¹=ω²
-	// But ζ = ω^(2/3) which doesn't make sense. Let me reconsider.
-	//
-	// Actually for p mod 9 = 4, there are no 9th roots of unity (only cube roots).
-	// The verify-and-adjust is simpler:
-	// If y³ = x, done.
-	// If y³ = x·ω, then (y·ω)³ = y³·ω³ = y³ = x·ω ≠ x. Wrong.
-	// If c·ω = x (i.e. y³·ω = x), then (y/ω^(1/3))³ = x.
-	// But ω^(1/3) exists only if 9 | (p-1), which is not the case here.
-	//
-	// So for p mod 9 = 4: if y³ ≠ x, the element is NOT a cubic residue.
-	// Wait — let me reconsider. The cbrt helper exponent should give the correct
-	// cube root when one exists. The issue is the Fp cbrt:
-	// For p mod 9 = 4: (2p+1)/9 is the cbrt exponent, and cbrt is UNIQUE.
-	// So no adjustment should be needed for the Fp cbrt step.
-	//
-	// But the torus approach could still have sign issues. Let me just check all three:
+	// For p mod 9 = 4: v₃(p-1) = 1, so the Fp cube root formula returns j = 0
+	// deterministically — no ζ-adjustment is needed. If y³ ≠ x, x is not a
+	// cubic residue. The checks below are purely defensive.
 
 	var cw2 E2
 	cw2.A0.Mul(&c.A0, &omega2)
 	cw2.A1.Mul(&c.A1, &omega2)
 	if cw2.Equal(x) {
-		// This shouldn't happen for p mod 9 = 4 if the Fp cbrt is unique
-		// But handle it defensively
+		// Defensive: should not occur since j = 0 always for p mod 9 = 4.
 		z.A0.Mul(&y.A0, &omega)
 		z.A1.Mul(&y.A1, &omega)
 		var check E2

@@ -17,7 +17,8 @@ var lucasExponent = [6]uint64{
 
 // Cbrt sets z to the cube root of x and returns z.
 // Returns nil if x is not a cubic residue.
-// For BLS12-377, p mod 9 = 7, so the cube root is unique.
+// For BLS12-377, p mod 9 = 7, so the Fp cube root formula returns j = 0
+// deterministically and no adjustment is needed.
 func (z *E2) Cbrt(x *E2) *E2 {
 	return z.cbrtTorus(x)
 }
@@ -226,7 +227,8 @@ func (z *E2) cbrtOkeyaSakurai(x *E2) *E2 {
 }
 
 // cbrtVerify checks z³ = x. Returns nil if not.
-// For p mod 9 = 7, cube root is unique: no adjustment needed.
+// For p mod 9 = 7 (and also p mod 9 = 4), the Fp cube root formula returns
+// j = 0 deterministically (v₃(p-1) = 1), so only verification is needed.
 func (z *E2) cbrtVerify(x *E2) *E2 {
 	var c E2
 	c.Square(z).Mul(&c, z)
