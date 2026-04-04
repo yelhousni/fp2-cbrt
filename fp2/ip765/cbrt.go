@@ -28,12 +28,6 @@ func (z *E2) Cbrt(x *E2) *E2 {
 	return z.cbrtOkeyaSakurai(x)
 }
 
-// cbrtTorus sets z to the cube root of x using the algebraic torus method and returns z.
-// Returns nil if x is not a cubic residue.
-func (z *E2) cbrtTorus(x *E2) *E2 {
-	return z.cbrtTorus(x)
-}
-
 func (z *E2) cbrtTorus(x *E2) *E2 {
 	if x.A1.IsZero() {
 		if z.A0.Cbrt(&x.A0) == nil {
