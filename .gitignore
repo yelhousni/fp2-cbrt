@@ -32,3 +32,8 @@ go.work.sum
 # .vscode/
 
 *.log
+
+# blind submission artifact
+scripts/
+artifact/
+artifact.tar.gz
